@@ -327,31 +327,33 @@ struct HomeView: View {
                                                 isSearchFocused = false
                                             }
                                         } label: {
-                                            VStack(alignment: .leading, spacing: 4) {
+                                            VStack(alignment: .leading, spacing: 2) {
                                                 Text(result.title)
-                                                    .font(.system(size: 16, weight: .medium))
+                                                    .font(.system(size: 15, weight: .semibold))
                                                     .foregroundStyle(.primary)
+                                                    .lineLimit(1)
                                                 
                                                 if !result.subtitle.isEmpty {
                                                     Text(result.subtitle)
-                                                        .font(.system(size: 14))
+                                                        .font(.system(size: 13))
                                                         .foregroundStyle(.secondary)
+                                                        .lineLimit(1)
                                                 }
                                             }
                                             .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.horizontal, 20)
-                                            .padding(.vertical, 14)
+                                            .padding(.horizontal, 18)
+                                            .padding(.vertical, 12)
                                         }
                                         .buttonStyle(.plain)
                                         
                                         if result.id != locationManager.searchResults.last?.id {
                                             Divider()
-                                                .padding(.leading, 20)
+                                                .padding(.leading, 18)
                                         }
                                     }
                                 }
                             }
-                            .frame(maxHeight: 250)
+                            .frame(maxHeight: 200)
                             .background(
                                 ZStack {
                                     // Liquid glass background - only top corners rounded
