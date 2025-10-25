@@ -70,7 +70,6 @@ struct CircularMapView: View {
         .onMapCameraChange { _ in handleMapInteraction() }
         .frame(width: mapSize, height: mapSize)
         .clipShape(Circle())
-        .overlay(Circle().stroke(Color(.systemGray4), lineWidth: 3))
         .shadow(color: .black.opacity(0.15), radius: 10)
         .onAppear {
             updateCamera(for: location, heading: locationManager.heading, animated: false)
