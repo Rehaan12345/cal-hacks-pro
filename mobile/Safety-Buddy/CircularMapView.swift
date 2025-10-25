@@ -16,8 +16,8 @@ struct CircularMapView: View {
     
     // MARK: - Constants
     private let mapSize: CGFloat = 250
-    private let zoomDistance: CLLocationDistance = 500
-    private let cameraPitch: CGFloat = 45
+    private let zoomDistance: CLLocationDistance = 100
+    private let cameraPitch: CGFloat = 0
     private let recenterDelay: TimeInterval = 2.0
     
     // MARK: - Body
@@ -69,11 +69,11 @@ struct CircularMapView: View {
         ZStack {
             Circle()
                 .fill(Color.blue.opacity(0.2))
-                .frame(width: 60, height: 60)
+                .frame(width: 80, height: 80)
             
             Circle()
                 .fill(Color.blue)
-                .frame(width: 16, height: 16)
+                .frame(width: 30, height: 30)
                 .overlay(Circle().stroke(.white, lineWidth: 3))
         }
     }
