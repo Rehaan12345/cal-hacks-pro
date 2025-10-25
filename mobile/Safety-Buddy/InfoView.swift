@@ -103,7 +103,7 @@ struct InfoView: View {
     
     private var socialFeed: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("What People Are Saying")
+            Text("Hear from locals:")
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
@@ -175,11 +175,12 @@ struct InfoView: View {
             
             VStack(alignment: .leading, spacing: 6) {
                 Text("\"\(quote.quote)\"")
+                    .fontDesign(.serif)
                     .font(.body)
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 
-                Text("\(quote.source) • \(quote.userName)")
+                Text("\(quote.userName) • \(quote.source.capitalized)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
