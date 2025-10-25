@@ -60,10 +60,10 @@ struct SafetyTipsFeed: View {
                 }
             }
             .frame(height: 120)
+            .padding(.bottom, -12)
         }
         .padding(12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .glassEffect(.regular, in: .rect(cornerRadius: 20, style: .continuous))
         .frame(maxWidth: 280)
         .padding(.horizontal, 24)
     }
