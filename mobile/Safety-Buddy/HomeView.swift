@@ -37,6 +37,7 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack {
+            ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 // Header
                 HStack {
@@ -51,7 +52,7 @@ struct HomeView: View {
                 
                 Spacer()
                 // Circular Map
-                CircularMapView(locationManager: locationManager)
+                    CircularMapView(locationManager: locationManager)
                 
                 Spacer()
                 
@@ -295,10 +296,23 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 40)
                 .padding(.bottom, 40)
+            }
+            .background(
+                LinearGradient(
+                    colors: [
+                        currentState.backgroundColor.opacity(0.8),
+                        currentState.backgroundColor
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
                 
-                // Search Results
+                // Search Results Overlay
                 if isSearchExpanded && !locationManager.searchResults.isEmpty {
-                    VStack(spacing: 0) {
+                    VStack {
+                        Spacer()
+                        
                         ScrollView {
                             VStack(spacing: 0) {
                                 ForEach(locationManager.searchResults) { result in
@@ -334,7 +348,7 @@ struct HomeView: View {
                                 }
                             }
                         }
-                        .frame(maxHeight: 280)
+                        .frame(maxHeight: 250)
                         .background(
                             ZStack {
                                 // Liquid glass background
@@ -374,22 +388,12 @@ struct HomeView: View {
                         )
                         .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
                         .shadow(color: .blue.opacity(0.15), radius: 18, x: 0, y: 8)
+                        .padding(.horizontal, 60)
+                        .padding(.bottom, 120)
                     }
-                    .padding(.horizontal, 60)
-                    .padding(.bottom, 120)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .background(
-                LinearGradient(
-                    colors: [
-                        currentState.backgroundColor.opacity(0.8),
-                        currentState.backgroundColor
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
         }
         
     }
