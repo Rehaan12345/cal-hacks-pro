@@ -64,14 +64,7 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity)
             .background(
-                LinearGradient(
-                    colors: [
-                        currentState.backgroundColor.opacity(0.8),
-                        currentState.backgroundColor
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                currentState.backgroundColor.gradient
             )
             .overlay(alignment: .bottom) {
                 
@@ -97,7 +90,7 @@ struct HomeView: View {
                                                 VStack(alignment: .leading, spacing: 2) {
                                                     Text(result.title)
                                                         .font(.system(size: 15, weight: .semibold))
-                                                        .foregroundStyle(.primary)
+                                                        .foregroundStyle(.black)
                                                         .lineLimit(1)
                                                     
                                                     if !result.subtitle.isEmpty {
@@ -135,6 +128,7 @@ struct HomeView: View {
                                 .bold()
                                 .frame(width: 60, height: 60)
                                 .font(isSearchExpanded ? .title3 : .title2)
+                                .foregroundStyle(.black)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSearchFocused)
                                 .matchedGeometryEffect(id: "searchIcon", in: searchAnimation)
                             
