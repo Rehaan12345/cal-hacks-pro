@@ -293,9 +293,9 @@ struct HomeView: View {
                         }
                         .transition(.scale.combined(with: .opacity))
                     }
-                }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 40)
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 50)
             }
             .background(
                 LinearGradient(
@@ -310,7 +310,7 @@ struct HomeView: View {
                 
                 // Search Results Overlay
                 if isSearchExpanded && !locationManager.searchResults.isEmpty {
-                    VStack {
+                    VStack(spacing: 0) {
                         Spacer()
                         
                         ScrollView {
@@ -388,8 +388,8 @@ struct HomeView: View {
                         )
                         .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
                         .shadow(color: .blue.opacity(0.15), radius: 18, x: 0, y: 8)
-                        .padding(.horizontal, 60)
-                        .padding(.bottom, 120)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 118)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
