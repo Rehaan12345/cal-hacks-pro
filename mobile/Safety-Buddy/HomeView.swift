@@ -68,6 +68,7 @@ struct HomeView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity)
+            .padding(.bottom, 50)
             .background(
                 currentState.backgroundColor.gradient
             )

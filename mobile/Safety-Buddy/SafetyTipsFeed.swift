@@ -59,7 +59,7 @@ struct SafetyTipsFeed: View {
                     }
                 }
             }
-            .frame(height: 120)
+            .frame(idealHeight: 120, maxHeight: 200)
             .padding(.bottom, -12)
         }
         .padding(12)
