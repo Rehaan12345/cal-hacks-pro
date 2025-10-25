@@ -210,19 +210,8 @@ struct HomeView: View {
                     
                     if !isSearchExpanded {
                         Spacer()
-                        
-                        // SOS Button
-                        Button {
-                            print("SOS")
-                        } label: {
-                            Image(systemName: "sos")
-                                .foregroundStyle(.primary)
-                                .bold()
-                                .frame(width: 60, height: 60)
-                                .glassEffect(.regular, in: .circle)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
+                    
+                        Menu {
                             Button {
                                 print("call 911")
                             } label: {
@@ -241,8 +230,14 @@ struct HomeView: View {
                                 Image(systemName: "flashlight.on.fill")
                                 Text("Flash SOS")
                             }
+                        } label: {
+                            Image(systemName: "sos")
+                                .foregroundStyle(.primary)
+                                .bold()
+                                .frame(width: 60, height: 60)
+                                .glassEffect(.regular, in: .circle)
                         }
-                        .transition(.scale.combined(with: .opacity))
+                        .tint(.primary)
                     }
                 }
                 .padding(.horizontal, isSearchFocused ? 20 : 40)
