@@ -35,16 +35,27 @@ struct HomeView: View {
     @FocusState private var isSearchFocused: Bool
     @Namespace private var searchAnimation
     
+    @State private var safetyTipsAreExpanded = false
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Header
+                Group {
+                    if locationManager.isAtActualLocation {
+                        Text("\(Image(systemName: "location.fill")) Current Location")
+                    } else if let neighborhoodName = locationManager.neighborhoodName {
+                        Text("\(Image(systemName: "location.fill")) \(neighborhoodName)")
+                    }
+                }
+                .bold()
+                .foregroundStyle(.white)
                     
                 NavigationLink(destination: InfoView()) {
                     
                     HStack {
                         Text(currentState.rawValue)
-                            .font(.system(size: 54, weight: .bold, design: .rounded))
+                            .font(.system(size: 54, weight: .bold))
                             .foregroundStyle(.white)
                         
                         Image(systemName: "chevron.right")
@@ -62,7 +73,7 @@ struct HomeView: View {
                 Spacer()
                 
                 // Safety Tips Feed
-                SafetyTipsFeed()
+                SafetyTipsFeed(isExpanded: $safetyTipsAreExpanded)
                 
                 
                 Spacer()
@@ -245,6 +256,7 @@ struct HomeView: View {
                 .animation(.spring, value: isSearchFocused)
             }
         }
+        .animation(.spring, value: safetyTipsAreExpanded)
         
     }
 }

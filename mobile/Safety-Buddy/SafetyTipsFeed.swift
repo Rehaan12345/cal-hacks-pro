@@ -27,61 +27,81 @@ struct SafetyTipsFeed: View {
         SafetyTip(icon: "bell.fill", tip: "Trust your instincts", category: "Awareness"),
     ]
     
+    @Binding var isExpanded: Bool
+    
     // MARK: - Body
     var body: some View {
         // Single unified container with header inside
         VStack(alignment: .leading, spacing: 0) {
             // Header
-            HStack {
-                Image(systemName: "lightbulb.fill")
-                    .foregroundStyle(.yellow)
-                    .font(.caption)
-                
-                Text("Safety Tips")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                
-                Spacer()
+            Button {
+                isExpanded.toggle()
+            } label: {
+                HStack {
+                    if isExpanded {
+                        Spacer()
+                    }
+                    
+                    Text("\(Image(systemName: "sparkles")) Actionable Insights")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .tint(.primary)
+                    
+                    if isExpanded {
+                        Spacer()
+                    }
+                    
+                        Image(systemName: "chevron.right")
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .bold()
+                    
+                }
             }
-            .padding(.bottom, 8)
+            .padding(.bottom, isExpanded ? 8 : 0)
             
-            // Scrollable tips list
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(Array(tips.enumerated()), id: \.element.id) { index, tip in
-                        tipRow(tip)
-                        
-                        if index < tips.count - 1 {
-                            Divider()
-                                .padding(.leading, 42)
+            if isExpanded {
+                // Scrollable tips list
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(tips.enumerated()), id: \.element.id) { index, tip in
+                            tipRow(tip)
+                            
+                            if index < tips.count - 1 {
+                                Divider()
+                                    .padding(.leading, 42)
+                            }
                         }
                     }
                 }
+                .frame(idealHeight: 120, maxHeight: 200)
+                .padding(.bottom, -12)
+                .clipped()
             }
-            .frame(idealHeight: 120, maxHeight: 200)
-            .padding(.bottom, -12)
         }
         .padding(12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 20, style: .continuous))
-        .frame(maxWidth: 280)
-        .padding(.horizontal, 24)
+        .clipShape(.rect(cornerRadius: 20, style: .continuous))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20, style: .continuous))
+        .animation(.spring, value: isExpanded)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 40)
     }
     
     // MARK: - Tip Row
     private func tipRow(_ tip: SafetyTip) -> some View {
         HStack(spacing: 10) {
-            Circle()
-                .fill(Color.blue.opacity(0.15))
-                .frame(width: 32, height: 32)
-                .overlay(
+//            Circle()
+//                .fill(Color.blue.opacity(0.15))
+//                .frame(width: 32, height: 32)
+//                .overlay(
                     Image(systemName: tip.icon)
                         .foregroundStyle(.blue)
-                        .font(.system(size: 14))
-                )
+                        .font(.system(size: 20))
+                        .frame(width: 32, height: 32)
+//                )
             
             Text(tip.tip)
-                .font(.caption)
+                .font(.body)
                 .foregroundStyle(.primary)
             
             Spacer()
@@ -89,17 +109,17 @@ struct SafetyTipsFeed: View {
         .padding(.vertical, 8)
     }
 }
-
-#Preview {
-    ZStack {
-        Color.green.opacity(0.3)
-            .ignoresSafeArea()
-        
-        VStack {
-            Spacer()
-            SafetyTipsFeed()
-            Spacer()
-        }
-    }
-}
+//
+//#Preview {
+//    ZStack {
+//        Color.green.opacity(0.3)
+//            .ignoresSafeArea()
+//        
+//        VStack {
+//            Spacer()
+//            SafetyTipsFeed()
+//            Spacer()
+//        }
+//    }
+//}
 

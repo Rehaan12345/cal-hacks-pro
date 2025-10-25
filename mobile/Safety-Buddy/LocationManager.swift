@@ -25,32 +25,57 @@ struct SearchResult: Identifiable {
     }
 }
 
+import Foundation
+import CoreLocation
+import MapKit
+
+@MainActor
 class LocationManager: NSObject, ObservableObject {
+    // MARK: - Core Managers
     private let locationManager = CLLocationManager()
     private let searchCompleter = MKLocalSearchCompleter()
+    private let geocoder = CLGeocoder()
     
-    @Published var location: CLLocation?
+    // MARK: - Published Properties
+    @Published var location: CLLocation?                          // The location shown on the map
+    @Published var currentDeviceLocation: CLLocation?              // The actual GPS location
     @Published var heading: CLHeading?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var isLoading = false
     
-    // Search-related properties
+    
+    // Search
     @Published var searchQuery = ""
     @Published var searchResults: [SearchResult] = []
     @Published var isSearching = false
     
+    // Geocoding
+    @Published var neighborhoodName: String? = nil
+    
+    // MARK: - Private
+    private var lastGeocodeTime: Date?
+    
+    // MARK: - Computed
+    /// Returns true if the map’s displayed location is within 10m of the real device location
+    var isAtActualLocation: Bool {
+        guard let current = currentDeviceLocation, let displayed = location else {
+            return false
+        }
+        return current.distance(from: displayed) < 10
+    }
+    
+    // MARK: - Init
     override init() {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 10 // Update every 10 meters
-        locationManager.headingFilter = 5 // Update every 5 degrees
+        locationManager.distanceFilter = 10 // meters
+        locationManager.headingFilter = 5   // degrees
         
         searchCompleter.delegate = self
         searchCompleter.resultTypes = [.address, .pointOfInterest]
         
-        // Set a default region for search (San Francisco Bay Area)
-        // This will be updated when user location is available
+        // Default region (San Francisco)
         let defaultRegion = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
             latitudinalMeters: 50000,
@@ -58,6 +83,8 @@ class LocationManager: NSObject, ObservableObject {
         )
         searchCompleter.region = defaultRegion
     }
+    
+    // MARK: - Location Permissions & Updates
     
     func requestPermission() {
         locationManager.requestWhenInUseAuthorization()
@@ -75,7 +102,14 @@ class LocationManager: NSObject, ObservableObject {
         isLoading = false
     }
     
-    // MARK: - Search Methods
+    func resetToCurrentLocation() {
+        startUpdating()
+        if let current = currentDeviceLocation {
+            location = current
+        }
+    }
+    
+    // MARK: - Search
     
     func updateSearchQuery(_ query: String) {
         searchQuery = query
@@ -88,27 +122,24 @@ class LocationManager: NSObject, ObservableObject {
     }
     
     func selectLocation(_ searchResult: SearchResult) {
-        // If we have a completion, resolve it to get accurate coordinates
         if let completion = searchResult.completion {
             let searchRequest = MKLocalSearch.Request(completion: completion)
             let search = MKLocalSearch(request: searchRequest)
             
-            Task {
-                do {
-                    let response = try await search.start()
-                    if let item = response.mapItems.first {
-                        let selectedLocation = CLLocation(
-                            latitude: item.placemark.coordinate.latitude,
-                            longitude: item.placemark.coordinate.longitude
-                        )
-                        
-                        await MainActor.run {
-                            self.location = selectedLocation
-                            self.searchResults = []
-                            self.searchQuery = ""
-                        }
+            search.start { [weak self] response, error in
+                guard let self = self else { return }
+                if let item = response?.mapItems.first {
+                    let selectedLocation = CLLocation(
+                        latitude: item.placemark.coordinate.latitude,
+                        longitude: item.placemark.coordinate.longitude
+                    )
+                    DispatchQueue.main.async {
+                        self.location = selectedLocation
+                        self.searchResults = []
+                        self.searchQuery = ""
+                        self.reverseGeocode(location: selectedLocation)
                     }
-                } catch {
+                } else if let error = error {
                     print("Error resolving location: \(error.localizedDescription)")
                 }
             }
@@ -119,15 +150,14 @@ class LocationManager: NSObject, ObservableObject {
                 longitude: searchResult.coordinate.longitude
             )
             self.location = selectedLocation
-            searchResults = []
-            searchQuery = ""
+            self.searchResults = []
+            self.searchQuery = ""
+            self.reverseGeocode(location: selectedLocation)
         }
     }
-    
-    func resetToCurrentLocation() {
-        startUpdating()
-    }
 }
+
+// MARK: - CLLocationManagerDelegate
 
 extension LocationManager: CLLocationManagerDelegate {
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -146,17 +176,27 @@ extension LocationManager: CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        self.location = location
+        guard let newLocation = locations.last else { return }
+        
+        // Update real GPS location
+        self.currentDeviceLocation = newLocation
         isLoading = false
         
-        // Update search region to make results more relevant
+        // If user hasn't selected another location, keep map following user
+        if isAtActualLocation || location == nil {
+            self.location = newLocation
+        }
+        
+        // Update search region
         let region = MKCoordinateRegion(
-            center: location.coordinate,
-            latitudinalMeters: 50000, // 50km radius
+            center: newLocation.coordinate,
+            latitudinalMeters: 50000,
             longitudinalMeters: 50000
         )
         searchCompleter.region = region
+        
+        // Reverse geocode for neighborhood name
+        reverseGeocode(location: newLocation)
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
@@ -165,19 +205,45 @@ extension LocationManager: CLLocationManagerDelegate {
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         let clError = error as NSError
-        
-        // Only log significant errors (ignore transient location unknown errors)
         if clError.code != 0 {
             print("Location error: \(error.localizedDescription)")
         }
         
         isLoading = false
         
-        // Set a fallback location if we can't get user's location
-        // This allows search to still work
         if location == nil {
-            // Use a default location (San Francisco)
+            // Fallback to default location (San Francisco)
             location = CLLocation(latitude: 37.7749, longitude: -122.4194)
+        }
+    }
+}
+
+// MARK: - Reverse Geocoding
+
+extension LocationManager {
+    private func reverseGeocode(location: CLLocation) {
+        // Avoid spamming requests
+        if let lastTime = lastGeocodeTime,
+           Date().timeIntervalSince(lastTime) < 5 {
+            return
+        }
+        lastGeocodeTime = Date()
+        
+        geocoder.cancelGeocode()
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
+            guard let self = self else { return }
+            if let placemark = placemarks?.first {
+                let neighborhood = placemark.subLocality
+                let city = placemark.locality
+                let name = neighborhood ?? city ?? "Unknown"
+                
+                DispatchQueue.main.async {
+                    self.neighborhoodName = name
+                    print("📍 Neighborhood: \(name)")
+                }
+            } else if let error = error {
+                print("Reverse geocode failed: \(error.localizedDescription)")
+            }
         }
     }
 }
@@ -188,20 +254,16 @@ extension LocationManager: MKLocalSearchCompleterDelegate {
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         print("✅ Got \(completer.results.count) search results")
         
-        // Convert completions to search results quickly
         let results = completer.results.prefix(10).compactMap { completion -> SearchResult? in
-            // For most results, we can create a basic coordinate from the completion
-            // This is much faster than doing individual searches
-            return SearchResult(
+            SearchResult(
                 title: completion.title,
                 subtitle: completion.subtitle,
-                coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0), // Will be resolved when selected
+                coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),
                 completion: completion
             )
         }
         
         print("📍 Displaying \(results.count) results")
-        
         DispatchQueue.main.async {
             self.searchResults = results
         }
@@ -214,4 +276,3 @@ extension LocationManager: MKLocalSearchCompleterDelegate {
         }
     }
 }
-
