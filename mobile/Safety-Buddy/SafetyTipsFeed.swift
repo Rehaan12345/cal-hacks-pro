@@ -27,7 +27,7 @@ struct SafetyTipsFeed: View {
         SafetyTip(icon: "bell.fill", tip: "Trust your instincts", category: "Awareness"),
     ]
     
-    @State private var isExpanded = false
+    @Binding var isExpanded: Bool
     
     // MARK: - Body
     var body: some View {
@@ -109,17 +109,17 @@ struct SafetyTipsFeed: View {
         .padding(.vertical, 8)
     }
 }
-
-#Preview {
-    ZStack {
-        Color.green.opacity(0.3)
-            .ignoresSafeArea()
-        
-        VStack {
-            Spacer()
-            SafetyTipsFeed()
-            Spacer()
-        }
-    }
-}
+//
+//#Preview {
+//    ZStack {
+//        Color.green.opacity(0.3)
+//            .ignoresSafeArea()
+//        
+//        VStack {
+//            Spacer()
+//            SafetyTipsFeed()
+//            Spacer()
+//        }
+//    }
+//}
 
