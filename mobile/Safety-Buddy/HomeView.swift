@@ -183,8 +183,9 @@ struct HomeView: View {
                     .background(
                         GlassEffectContainer {
                             if isSearchExpanded {
-                                Capsule()
-                                    .glassEffect(.regular, in: .rect(cornerRadius: 28, style: .continuous))
+                                RoundedRectangle(cornerRadius: 30)
+                                    .glassEffect(.regular, in: .rect(cornerRadius: 30, style: .continuous))
+//                                    .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
                                     .glassEffectID("searchBackground", in: searchAnimation)
                             } else {
                                 Circle()
