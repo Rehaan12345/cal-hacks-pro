@@ -39,13 +39,18 @@ struct HomeView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Header
-                HStack {
-                    Text(currentState.rawValue)
-                        .font(.system(size: 54, weight: .bold, design: .rounded))
-                    NavigationLink(destination: InfoView()) {
-                        Image(systemName: "info.circle.fill")
+                    
+                NavigationLink(destination: InfoView()) {
+                    
+                    HStack {
+                        Text(currentState.rawValue)
+                            .font(.system(size: 54, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        
+                        Image(systemName: "chevron.right")
                             .font(.title)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(.secondary)
+                            .bold()
                     }
                 }
                 
