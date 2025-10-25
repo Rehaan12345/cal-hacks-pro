@@ -181,16 +181,17 @@ struct HomeView: View {
                     .frame(maxWidth: isSearchExpanded ? .infinity : 60)
                     .frame(height: isSearchExpanded ? nil : 60)
                     .background(
-                        GlassEffectContainer {
+                        Group {
                             if isSearchExpanded {
                                 RoundedRectangle(cornerRadius: 30)
                                     .glassEffect(.regular, in: .rect(cornerRadius: 30, style: .continuous))
-//                                    .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
+                                    .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
                                     .glassEffectID("searchBackground", in: searchAnimation)
                             } else {
                                 Circle()
                                     .glassEffect(.regular, in: .circle)
                                     .glassEffectID("searchBackground", in: searchAnimation)
+                                    .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
                             }
                         }
                     )
@@ -242,7 +243,7 @@ struct HomeView: View {
                     }
                 }
                 .padding(.horizontal, isSearchFocused ? 20 : 40)
-                .padding(.bottom, isSearchFocused ? 50 : 0)
+                .padding(.bottom, isSearchFocused ? 10 : 0)
                 .animation(.spring, value: isSearchFocused)
             }
         }
