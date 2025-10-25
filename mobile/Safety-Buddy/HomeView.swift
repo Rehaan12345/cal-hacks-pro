@@ -135,7 +135,7 @@ struct HomeView: View {
                                 .bold()
                                 .frame(width: 60, height: 60)
                                 .font(isSearchExpanded ? .title3 : .title2)
-//                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSearchFocused)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSearchFocused)
                                 .matchedGeometryEffect(id: "searchIcon", in: searchAnimation)
                             
                             if isSearchExpanded {
@@ -184,11 +184,13 @@ struct HomeView: View {
                         Group {
                             if isSearchExpanded {
                                 RoundedRectangle(cornerRadius: 30)
+                                    .foregroundStyle(.clear)
                                     .glassEffect(.regular, in: .rect(cornerRadius: 30, style: .continuous))
                                     .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
                                     .glassEffectID("searchBackground", in: searchAnimation)
                             } else {
                                 Circle()
+                                    .foregroundStyle(.clear)
                                     .glassEffect(.regular, in: .circle)
                                     .glassEffectID("searchBackground", in: searchAnimation)
                                     .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
@@ -214,11 +216,12 @@ struct HomeView: View {
                             print("SOS")
                         } label: {
                             Image(systemName: "sos")
-                                .foregroundStyle(.black)
+                                .foregroundStyle(.primary)
                                 .bold()
                                 .frame(width: 60, height: 60)
                                 .glassEffect(.regular, in: .circle)
                         }
+                        .buttonStyle(.plain)
                         .contextMenu {
                             Button {
                                 print("call 911")
