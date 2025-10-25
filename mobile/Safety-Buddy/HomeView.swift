@@ -41,11 +41,15 @@ struct HomeView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Header
-                if locationManager.isAtActualLocation {
-                    Text("\(Image(systemName: "location.fill")) Current Location")
-                        .bold()
-                        .foregroundStyle(.white)
+                Group {
+                    if locationManager.isAtActualLocation {
+                        Text("\(Image(systemName: "location.fill")) Current Location")
+                    } else if let neighborhoodName = locationManager.neighborhoodName {
+                        Text("\(Image(systemName: "location.fill")) \(neighborhoodName)")
+                    }
                 }
+                .bold()
+                .foregroundStyle(.white)
                     
                 NavigationLink(destination: InfoView()) {
                     
