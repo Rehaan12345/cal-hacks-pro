@@ -20,11 +20,13 @@ struct StatCard: Identifiable {
     let value: String
     let label: String
     let icon: String?
+    let tint: Color
     
-    init(value: String, label: String, icon: String? = nil) {
+    init(value: String, label: String, icon: String? = nil, tint: Color) {
         self.value = value
         self.label = label
         self.icon = icon
+        self.tint = tint
     }
 }
 
@@ -41,10 +43,10 @@ struct InfoView: View {
     ]
     
     private let stats = [
-        StatCard(value: "4 in 100", label: "Crime Rate", icon: "exclamationmark.shield.fill"),
-        StatCard(value: "Mugging", label: "Primary Risk", icon: "figure.walk"),
-        StatCard(value: "4 | last 12 hrs", label: "Recent Events", icon: "person.badge.shield.exclamationmark.fill"),
-        StatCard(value: Date.now.formatted(date: .omitted, time: .shortened), label: "Get's safer at", icon: "clock.fill"),
+        StatCard(value: "4 in 100", label: "Crime Rate", icon: "exclamationmark.shield.fill", tint: .pink),
+        StatCard(value: "Mugging", label: "Primary Risk", icon: "figure.walk", tint: .orange),
+        StatCard(value: "4 | last 12 hrs", label: "Recent Events", icon: "person.badge.shield.exclamationmark.fill", tint: .yellow),
+        StatCard(value: Date.now.formatted(date: .omitted, time: .shortened), label: "Get's safer at", icon: "clock.fill", tint: .blue),
     ]
     
     // MARK: - Body
@@ -129,7 +131,7 @@ struct InfoView: View {
             if let icon = stat.icon {
                 Image(systemName: icon)
                     .font(.largeTitle)
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(stat.tint)
             }
             
             Spacer()
@@ -141,7 +143,6 @@ struct InfoView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             Text(stat.value)
-//                .font(.system(size: 16, weight: .semibold, design: .rounded))
                 .font(.title3)
                 .fontWeight(.semibold)
                 .fontDesign(.rounded)
@@ -153,8 +154,12 @@ struct InfoView: View {
         .frame(maxWidth: .infinity)
         .frame(height: 110)
         .padding()
-        .background(.ultraThickMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(stat.tint.opacity(0.2).gradient)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(stat.tint.opacity(0.3), lineWidth: 4)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
     
     private func quoteRowView(_ quote: SocialQuote) -> some View {
