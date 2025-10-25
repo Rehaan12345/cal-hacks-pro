@@ -15,6 +15,14 @@ struct SearchResult: Identifiable {
     let title: String
     let subtitle: String
     let coordinate: CLLocationCoordinate2D
+    let completion: MKLocalSearchCompletion?
+    
+    init(title: String, subtitle: String, coordinate: CLLocationCoordinate2D, completion: MKLocalSearchCompletion? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.coordinate = coordinate
+        self.completion = completion
+    }
 }
 
 class LocationManager: NSObject, ObservableObject {
@@ -70,13 +78,40 @@ class LocationManager: NSObject, ObservableObject {
     }
     
     func selectLocation(_ searchResult: SearchResult) {
-        let selectedLocation = CLLocation(
-            latitude: searchResult.coordinate.latitude,
-            longitude: searchResult.coordinate.longitude
-        )
-        self.location = selectedLocation
-        searchResults = []
-        searchQuery = ""
+        // If we have a completion, resolve it to get accurate coordinates
+        if let completion = searchResult.completion {
+            let searchRequest = MKLocalSearch.Request(completion: completion)
+            let search = MKLocalSearch(request: searchRequest)
+            
+            Task {
+                do {
+                    let response = try await search.start()
+                    if let item = response.mapItems.first {
+                        let selectedLocation = CLLocation(
+                            latitude: item.placemark.coordinate.latitude,
+                            longitude: item.placemark.coordinate.longitude
+                        )
+                        
+                        await MainActor.run {
+                            self.location = selectedLocation
+                            self.searchResults = []
+                            self.searchQuery = ""
+                        }
+                    }
+                } catch {
+                    print("Error resolving location: \(error.localizedDescription)")
+                }
+            }
+        } else {
+            // Use the coordinate directly if already resolved
+            let selectedLocation = CLLocation(
+                latitude: searchResult.coordinate.latitude,
+                longitude: searchResult.coordinate.longitude
+            )
+            self.location = selectedLocation
+            searchResults = []
+            searchQuery = ""
+        }
     }
     
     func resetToCurrentLocation() {
@@ -104,6 +139,14 @@ extension LocationManager: CLLocationManagerDelegate {
         guard let location = locations.last else { return }
         self.location = location
         isLoading = false
+        
+        // Update search region to make results more relevant
+        let region = MKCoordinateRegion(
+            center: location.coordinate,
+            latitudinalMeters: 50000, // 50km radius
+            longitudinalMeters: 50000
+        )
+        searchCompleter.region = region
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
@@ -120,35 +163,28 @@ extension LocationManager: CLLocationManagerDelegate {
 
 extension LocationManager: MKLocalSearchCompleterDelegate {
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        Task { @MainActor in
-            var results: [SearchResult] = []
-            
-            for completion in completer.results {
-                let searchRequest = MKLocalSearch.Request(completion: completion)
-                let search = MKLocalSearch(request: searchRequest)
-                
-                do {
-                    let response = try await search.start()
-                    if let item = response.mapItems.first {
-                        let result = SearchResult(
-                            title: completion.title,
-                            subtitle: completion.subtitle,
-                            coordinate: item.placemark.coordinate
-                        )
-                        results.append(result)
-                    }
-                } catch {
-                    // Silently continue on error
-                    continue
-                }
-            }
-            
+        // Convert completions to search results quickly
+        let results = completer.results.prefix(10).compactMap { completion -> SearchResult? in
+            // For most results, we can create a basic coordinate from the completion
+            // This is much faster than doing individual searches
+            return SearchResult(
+                title: completion.title,
+                subtitle: completion.subtitle,
+                coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0), // Will be resolved when selected
+                completion: completion
+            )
+        }
+        
+        DispatchQueue.main.async {
             self.searchResults = results
         }
     }
     
     func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
         print("Search error: \(error.localizedDescription)")
+        DispatchQueue.main.async {
+            self.searchResults = []
+        }
     }
 }
 
