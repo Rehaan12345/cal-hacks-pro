@@ -95,7 +95,7 @@ struct HomeView: View {
                                                 VStack(alignment: .leading, spacing: 2) {
                                                     Text(result.title)
                                                         .font(.system(size: 15, weight: .semibold))
-                                                        .foregroundStyle(.black)
+                                                        .foregroundStyle(.primary)
                                                         .lineLimit(1)
                                                     
                                                     if !result.subtitle.isEmpty {
@@ -133,7 +133,7 @@ struct HomeView: View {
                                 .bold()
                                 .frame(width: 60, height: 60)
                                 .font(isSearchExpanded ? .title3 : .title2)
-                                .foregroundStyle(.black)
+                                .foregroundStyle(.primary)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSearchFocused)
                                 .matchedGeometryEffect(id: "searchIcon", in: searchAnimation)
                             
