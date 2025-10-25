@@ -43,7 +43,7 @@ struct InfoView: View {
     private let stats = [
         StatCard(value: "4 in 100", label: "Crime Rate", icon: "exclamationmark.shield.fill"),
         StatCard(value: "Mugging", label: "Primary Risk", icon: "figure.walk"),
-        StatCard(value: "Armed men at Cadillac Dr", label: "Recent Events"),
+        StatCard(value: "4 | last 12 hrs", label: "Recent Events", icon: "person.badge.shield.exclamationmark.fill"),
         StatCard(value: Date.now.formatted(date: .omitted, time: .shortened), label: "Get's safer at", icon: "clock.fill"),
     ]
     
@@ -72,6 +72,7 @@ struct InfoView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 30)
     }
     private var statsGrid: some View {
         VStack(spacing: 12) {
