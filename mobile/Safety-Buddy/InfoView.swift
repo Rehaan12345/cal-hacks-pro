@@ -124,32 +124,36 @@ struct InfoView: View {
     
     // MARK: - Card Views
     private func statCardView(_ stat: StatCard) -> some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading) {
             if let icon = stat.icon {
                 Image(systemName: icon)
-                    .font(.system(size: 22))
+                    .font(.largeTitle)
                     .foregroundStyle(.tint)
-                    .frame(height: 22)
             }
             
-            Text(stat.value)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
             
             Text(stat.label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Text(stat.value)
+//                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.title3)
+                .fontWeight(.semibold)
+                .fontDesign(.rounded)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 110)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 12)
+        .padding()
         .background(.ultraThickMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
     
     private func quoteRowView(_ quote: SocialQuote) -> some View {
