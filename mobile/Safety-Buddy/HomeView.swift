@@ -213,19 +213,19 @@ struct HomeView: View {
                     
                         Menu {
                             Button {
-                                print("call 911")
+                                SOSHandler().call911()
                             } label: {
                                 Image(systemName: "car")
                                 Text("Call Services")
                             }
                             Button {
-                                print("whistle")
+                                SOSHandler().whistle()
                             } label: {
                                 Image(systemName: "horn")
                                 Text("Emergency Whistle")
                             }
                             Button {
-                                print("flash")
+                                SOSHandler().flash()
                             } label: {
                                 Image(systemName: "flashlight.on.fill")
                                 Text("Flash SOS")
