@@ -296,7 +296,8 @@ struct HomeView: View {
                     }
                     }
                     .padding(.horizontal, 40)
-                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 8 : 50)
+                    .padding(.bottom, 50)
+                    .offset(y: keyboardHeight > 0 ? -keyboardHeight + 42 : 0)
             }
             .background(
                 LinearGradient(
@@ -410,7 +411,8 @@ struct HomeView: View {
                             .shadow(color: .blue.opacity(0.15), radius: 18, x: 0, y: 8)
                         }
                         .padding(.horizontal, 40)
-                        .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 76 : 118)
+                        .padding(.bottom, 118)
+                        .offset(y: keyboardHeight > 0 ? -keyboardHeight + 42 : 0)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
