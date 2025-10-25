@@ -48,6 +48,15 @@ class LocationManager: NSObject, ObservableObject {
         
         searchCompleter.delegate = self
         searchCompleter.resultTypes = [.address, .pointOfInterest]
+        
+        // Set a default region for search (San Francisco Bay Area)
+        // This will be updated when user location is available
+        let defaultRegion = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            latitudinalMeters: 50000,
+            longitudinalMeters: 50000
+        )
+        searchCompleter.region = defaultRegion
     }
     
     func requestPermission() {
@@ -74,6 +83,7 @@ class LocationManager: NSObject, ObservableObject {
             searchResults = []
             return
         }
+        print("🔍 Searching for: \(query)")
         searchCompleter.queryFragment = query
     }
     
@@ -154,8 +164,21 @@ extension LocationManager: CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("Location error: \(error.localizedDescription)")
+        let clError = error as NSError
+        
+        // Only log significant errors (ignore transient location unknown errors)
+        if clError.code != 0 {
+            print("Location error: \(error.localizedDescription)")
+        }
+        
         isLoading = false
+        
+        // Set a fallback location if we can't get user's location
+        // This allows search to still work
+        if location == nil {
+            // Use a default location (San Francisco)
+            location = CLLocation(latitude: 37.7749, longitude: -122.4194)
+        }
     }
 }
 
@@ -163,6 +186,8 @@ extension LocationManager: CLLocationManagerDelegate {
 
 extension LocationManager: MKLocalSearchCompleterDelegate {
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        print("✅ Got \(completer.results.count) search results")
+        
         // Convert completions to search results quickly
         let results = completer.results.prefix(10).compactMap { completion -> SearchResult? in
             // For most results, we can create a basic coordinate from the completion
@@ -175,13 +200,15 @@ extension LocationManager: MKLocalSearchCompleterDelegate {
             )
         }
         
+        print("📍 Displaying \(results.count) results")
+        
         DispatchQueue.main.async {
             self.searchResults = results
         }
     }
     
     func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
-        print("Search error: \(error.localizedDescription)")
+        print("❌ Search error: \(error.localizedDescription)")
         DispatchQueue.main.async {
             self.searchResults = []
         }
