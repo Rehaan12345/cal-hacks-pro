@@ -34,6 +34,7 @@ struct HomeView: View {
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     @Namespace private var searchAnimation
+    @State private var keyboardHeight: CGFloat = 0
     
     var body: some View {
         NavigationStack {
@@ -295,7 +296,7 @@ struct HomeView: View {
                     }
                     }
                     .padding(.horizontal, 40)
-                    .padding(.bottom, 50)
+                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 20 : 50)
             }
             .background(
                 LinearGradient(
@@ -313,50 +314,62 @@ struct HomeView: View {
                     VStack(spacing: 0) {
                         Spacer()
                         
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                ForEach(locationManager.searchResults) { result in
-                                    Button {
-                                        locationManager.selectLocation(result)
-                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                                            isSearchExpanded = false
-                                            searchText = ""
-                                            isSearchFocused = false
-                                        }
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(result.title)
-                                                .font(.system(size: 16, weight: .medium))
-                                                .foregroundStyle(.primary)
-                                            
-                                            if !result.subtitle.isEmpty {
-                                                Text(result.subtitle)
-                                                    .font(.system(size: 14))
-                                                    .foregroundStyle(.secondary)
+                        // Search Results Container (joins with search bar)
+                        VStack(spacing: 0) {
+                            ScrollView {
+                                VStack(spacing: 0) {
+                                    ForEach(locationManager.searchResults) { result in
+                                        Button {
+                                            locationManager.selectLocation(result)
+                                            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                                                isSearchExpanded = false
+                                                searchText = ""
+                                                isSearchFocused = false
                                             }
+                                        } label: {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(result.title)
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundStyle(.primary)
+                                                
+                                                if !result.subtitle.isEmpty {
+                                                    Text(result.subtitle)
+                                                        .font(.system(size: 14))
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.horizontal, 20)
+                                            .padding(.vertical, 14)
                                         }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 14)
-                                    }
-                                    .buttonStyle(.plain)
-                                    
-                                    if result.id != locationManager.searchResults.last?.id {
-                                        Divider()
-                                            .padding(.leading, 20)
+                                        .buttonStyle(.plain)
+                                        
+                                        if result.id != locationManager.searchResults.last?.id {
+                                            Divider()
+                                                .padding(.leading, 20)
+                                        }
                                     }
                                 }
                             }
-                        }
-                        .frame(maxHeight: 250)
-                        .background(
-                            ZStack {
-                                // Liquid glass background
-                                RoundedRectangle(cornerRadius: 24)
+                            .frame(maxHeight: 250)
+                            .background(
+                                ZStack {
+                                    // Liquid glass background - only top corners rounded
+                                    UnevenRoundedRectangle(
+                                        topLeadingRadius: 24,
+                                        bottomLeadingRadius: 0,
+                                        bottomTrailingRadius: 0,
+                                        topTrailingRadius: 24
+                                    )
                                     .fill(.ultraThinMaterial)
-                                
-                                // Shimmer overlay
-                                RoundedRectangle(cornerRadius: 24)
+                                    
+                                    // Shimmer overlay
+                                    UnevenRoundedRectangle(
+                                        topLeadingRadius: 24,
+                                        bottomLeadingRadius: 0,
+                                        bottomTrailingRadius: 0,
+                                        topTrailingRadius: 24
+                                    )
                                     .fill(
                                         LinearGradient(
                                             colors: [
@@ -369,9 +382,14 @@ struct HomeView: View {
                                         )
                                     )
                                     .opacity(0.5)
-                                
-                                // Border
-                                RoundedRectangle(cornerRadius: 24)
+                                    
+                                    // Border (only top and sides)
+                                    UnevenRoundedRectangle(
+                                        topLeadingRadius: 24,
+                                        bottomLeadingRadius: 0,
+                                        bottomTrailingRadius: 0,
+                                        topTrailingRadius: 24
+                                    )
                                     .strokeBorder(
                                         LinearGradient(
                                             colors: [
@@ -384,14 +402,30 @@ struct HomeView: View {
                                         ),
                                         lineWidth: 1.5
                                     )
-                            }
-                        )
-                        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
-                        .shadow(color: .blue.opacity(0.15), radius: 18, x: 0, y: 8)
+                                }
+                            )
+                            .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+                            .shadow(color: .blue.opacity(0.15), radius: 18, x: 0, y: 8)
+                        }
                         .padding(.horizontal, 40)
-                        .padding(.bottom, 118)
+                        .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 88 : 118)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .onAppear {
+                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                    if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            keyboardHeight = keyboardFrame.height
+                        }
+                    }
+                }
+                
+                NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        keyboardHeight = 0
+                    }
                 }
             }
         }
