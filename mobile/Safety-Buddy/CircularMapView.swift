@@ -9,6 +9,8 @@ import SwiftUI
 import MapKit
 
 struct CircularMapView: View {
+    @Namespace var nm
+    
     // MARK: - Properties
     @StateObject private var locationManager = LocationManager()
     @State private var cameraPosition: MapCameraPosition = .automatic
@@ -20,15 +22,33 @@ struct CircularMapView: View {
     private let cameraPitch: CGFloat = 0
     private let recenterDelay: TimeInterval = 2.0
     
+    @State private var isViewingFullScreen = false
+    
     // MARK: - Body
     var body: some View {
-        ZStack {
+        NavigationLink {
             if let location = locationManager.location {
-                mapView(for: location)
-            } else {
-                placeholderView
+                Map(position: $cameraPosition) {
+                    Annotation("", coordinate: location.coordinate) {
+                        locationIndicator
+                    }
+                }
+                .mapStyle(.standard(elevation: .realistic))
+                .mapControls {}
+                .onMapCameraChange { _ in handleMapInteraction() }
+                .navigationTransition(.zoom(sourceID: "map", in: nm))
             }
+        } label: {
+            ZStack {
+                if let location = locationManager.location {
+                    mapView(for: location)
+                } else {
+                    placeholderView
+                }
+            }
+            .allowsHitTesting(false)
         }
+        .matchedTransitionSource(id: "map", in: nm)
         .onAppear {
             startLocationTracking()
         }
