@@ -296,7 +296,7 @@ struct HomeView: View {
                     }
                     }
                     .padding(.horizontal, 40)
-                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 20 : 50)
+                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 8 : 50)
             }
             .background(
                 LinearGradient(
@@ -353,7 +353,7 @@ struct HomeView: View {
                                     }
                                 }
                             }
-                            .frame(maxHeight: 200)
+                            .frame(maxHeight: 180)
                             .background(
                                 ZStack {
                                     // Liquid glass background - only top corners rounded
@@ -410,7 +410,7 @@ struct HomeView: View {
                             .shadow(color: .blue.opacity(0.15), radius: 18, x: 0, y: 8)
                         }
                         .padding(.horizontal, 40)
-                        .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 88 : 118)
+                        .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 76 : 118)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
