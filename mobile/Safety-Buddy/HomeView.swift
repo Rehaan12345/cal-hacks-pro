@@ -132,16 +132,10 @@ struct HomeView: View {
                         // Search Input Bar
                         HStack(spacing: 12) {
                             Image(systemName: "magnifyingglass")
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [.blue, .cyan],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                                .bold()
+                                .frame(width: 60, height: 60)
                                 .font(isSearchExpanded ? .title3 : .title2)
-                                .scaleEffect(isSearchFocused ? 1.1 : 1.0)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSearchFocused)
+//                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSearchFocused)
                                 .matchedGeometryEffect(id: "searchIcon", in: searchAnimation)
                             
                             if isSearchExpanded {
@@ -178,99 +172,27 @@ struct HomeView: View {
                                 } label: {
                                     Text("Cancel")
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [.blue, .cyan],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
                                 }
                                 .transition(.move(edge: .trailing).combined(with: .opacity))
                             }
                         }
-                        .padding(.horizontal, isSearchExpanded ? 20 : 18)
-                        .padding(.vertical, isSearchExpanded ? 14 : 18)
+                        .padding(.horizontal, 15)
                     }
                     .frame(maxWidth: isSearchExpanded ? .infinity : 60)
                     .frame(height: isSearchExpanded ? nil : 60)
                     .background(
-                        ZStack {
-                            // Base liquid glass layer
+                        GlassEffectContainer {
                             if isSearchExpanded {
-                                RoundedRectangle(cornerRadius: 28)
-                                    .fill(.ultraThinMaterial)
-                                    .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
+                                Capsule()
+                                    .glassEffect(.regular, in: .rect(cornerRadius: 28, style: .continuous))
+                                    .glassEffectID("searchBackground", in: searchAnimation)
                             } else {
                                 Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .matchedGeometryEffect(id: "searchBackground", in: searchAnimation)
-                            }
-                            
-                            // Shimmer gradient overlay
-                            if isSearchExpanded {
-                                RoundedRectangle(cornerRadius: 28)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                .white.opacity(0.3),
-                                                .clear,
-                                                .white.opacity(0.2)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .opacity(0.6)
-                            } else {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                .white.opacity(0.3),
-                                                .clear,
-                                                .white.opacity(0.2)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .opacity(0.6)
-                            }
-                            
-                            // Border highlight
-                            if isSearchExpanded {
-                                RoundedRectangle(cornerRadius: 28)
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            colors: [
-                                                .white.opacity(0.5),
-                                                .white.opacity(0.1),
-                                                .clear
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1.5
-                                    )
-                            } else {
-                                Circle()
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            colors: [
-                                                .white.opacity(0.5),
-                                                .white.opacity(0.1)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1.5
-                                    )
+                                    .glassEffect(.regular, in: .circle)
+                                    .glassEffectID("searchBackground", in: searchAnimation)
                             }
                         }
                     )
-                    .shadow(color: .black.opacity(0.12), radius: isSearchExpanded ? 15 : 12, x: 0, y: isSearchExpanded ? 8 : 6)
-                    .shadow(color: .blue.opacity(0.2), radius: isSearchExpanded ? 20 : 15, x: 0, y: isSearchExpanded ? 10 : 8)
                     .onTapGesture {
                         if !isSearchExpanded {
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
@@ -289,50 +211,11 @@ struct HomeView: View {
                         Button {
                             print("SOS")
                         } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                .white.opacity(0.3),
-                                                .clear,
-                                                .white.opacity(0.2)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .opacity(0.6)
-                                
-                                Circle()
-                                    .strokeBorder(
-                                        LinearGradient(
-                                            colors: [
-                                                .white.opacity(0.5),
-                                                .white.opacity(0.1)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1.5
-                                    )
-                                
-                                Text("SOS")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [.blue, .cyan],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                            }
-                            .frame(width: 60, height: 60)
-                            .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
-                            .shadow(color: .blue.opacity(0.2), radius: 15, x: 0, y: 8)
+                            Image(systemName: "sos")
+                                .foregroundStyle(.black)
+                                .bold()
+                                .frame(width: 60, height: 60)
+                                .glassEffect(.regular, in: .circle)
                         }
                         .contextMenu {
                             Button {
@@ -357,8 +240,9 @@ struct HomeView: View {
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .padding(.horizontal, 40)
+                .padding(.horizontal, isSearchFocused ? 20 : 40)
                 .padding(.bottom, isSearchFocused ? 50 : 0)
+                .animation(.spring, value: isSearchFocused)
             }
         }
         
