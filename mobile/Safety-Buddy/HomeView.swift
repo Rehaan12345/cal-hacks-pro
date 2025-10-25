@@ -39,7 +39,13 @@ struct HomeView: View {
     
     @State private var safetyTipsAreExpanded = false
     
+
     @State private var metadata: LocationMetadata? = nil
+
+    // Selfie camera states
+    @State private var capturedPhoto: UIImage?
+    @State private var isProcessing = false
+
     
     var body: some View {
         NavigationStack {
@@ -75,6 +81,22 @@ struct HomeView: View {
                     SafetyTipsFeed(metadata: metadata, isExpanded: $safetyTipsAreExpanded)
                 }
                 
+                // Processing Photo Indicator
+                if isProcessing {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .tint(.primary)
+                        Text("Processing your photo...")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(.rect(cornerRadius: 20, style: .continuous))
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20, style: .continuous))
+                    .padding(.horizontal, 40)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 
                 Spacer()
             }
@@ -275,8 +297,25 @@ struct HomeView: View {
                 .padding(.bottom, isSearchFocused ? 10 : 0)
                 .animation(.spring, value: isSearchFocused)
             }
+            .toolbar(content: {
+                NavigationLink(destination: SelfieCamera(capturedPhoto: $capturedPhoto, isProcessing: $isProcessing)) {
+                    Image(systemName: "person.fill")
+                        .foregroundStyle(.primary)
+                        .bold()
+                }
+            })
         }
         .animation(.spring, value: safetyTipsAreExpanded)
+        .onChange(of: isProcessing) { _, newValue in
+            if newValue {
+                // Auto-dismiss processing indicator after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation {
+                        isProcessing = false
+                    }
+                }
+            }
+        }
         
     }
 }
