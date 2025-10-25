@@ -74,7 +74,7 @@ struct InfoView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 30)
+        .padding(.bottom, 40)
     }
     private var statsGrid: some View {
         VStack(spacing: 12) {
