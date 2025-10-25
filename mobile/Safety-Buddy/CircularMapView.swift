@@ -42,6 +42,7 @@ struct CircularMapView: View {
             ZStack {
                 if let location = locationManager.location {
                     mapView(for: location)
+                        .padding()
                 } else {
                     placeholderView
                 }
@@ -70,7 +71,7 @@ struct CircularMapView: View {
         .frame(width: mapSize, height: mapSize)
         .clipShape(Circle())
         .overlay(Circle().stroke(Color(.systemGray4), lineWidth: 3))
-        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+        .shadow(color: .black.opacity(0.15), radius: 10)
         .onAppear {
             updateCamera(for: location, heading: locationManager.heading, animated: false)
         }
