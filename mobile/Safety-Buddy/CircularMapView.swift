@@ -10,7 +10,7 @@ import MapKit
 
 struct CircularMapView: View {
     // MARK: - Properties
-    @StateObject private var locationManager = LocationManager()
+    @ObservedObject var locationManager: LocationManager
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var recenterTimer: Timer?
     
@@ -184,7 +184,7 @@ struct CircularMapView: View {
 }
 
 #Preview {
-    CircularMapView()
+    CircularMapView(locationManager: LocationManager())
         .padding()
 }
 
