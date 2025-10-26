@@ -15,7 +15,13 @@ struct ProfileView: View {
     @State private var showProfileError = false
     @State private var profileErrorMessage = ""
     @State private var isCameraButtonPressed = false
+    @State private var isEditMode = false
     @StateObject private var deviceDetection = DeviceDetectionService.shared
+    
+    // Edit state
+    @State private var editAge: String = ""
+    @State private var editGender: String = ""
+    @State private var editRiskLevel: String = "medium"
     
     var body: some View {
         NavigationStack {
@@ -39,6 +45,9 @@ struct ProfileView: View {
                     }
                     
                     if let profile = userProfile {
+                        // Risk Level Badge (moved to top)
+                        riskLevelSection(profile.riskLevel)
+                        
                         // Profile Info Section
                         if profile.age != nil || profile.gender != nil {
                             profileInfoSection(profile)
@@ -53,9 +62,6 @@ struct ProfileView: View {
                         if !profile.valuableItems.isEmpty {
                             valuableItemsSection(profile.valuableItems)
                         }
-                        
-                        // Risk Level Badge
-                        riskLevelBadge(profile.riskLevel)
                     } else {
                         // Empty State
                         emptyStateView()
@@ -67,16 +73,35 @@ struct ProfileView: View {
                 .padding(.top, 20)
             }
             .toolbar {
-                NavigationLink(
-                    destination: SelfieCamera(
-                        capturedPhoto: $capturedPhoto,
-                        isProcessing: $isProcessing
-                    ),
-                    isActive: $isCameraButtonPressed
-                ) {
-                    Image(systemName: "camera.fill")
-                        .foregroundStyle(.primary)
-                        .bold()
+                ToolbarItem(placement: .topBarLeading) {
+                    if userProfile != nil {
+                        Button {
+                            if isEditMode {
+                                saveEdits()
+                            }
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isEditMode.toggle()
+                            }
+                        } label: {
+                            Text(isEditMode ? "Done" : "Edit")
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(
+                        destination: SelfieCamera(
+                            capturedPhoto: $capturedPhoto,
+                            isProcessing: $isProcessing
+                        ),
+                        isActive: $isCameraButtonPressed
+                    ) {
+                        Image(systemName: "camera.fill")
+                            .foregroundStyle(.primary)
+                            .bold()
+                    }
                 }
             }
             .presentationDetents(isCameraButtonPressed ? [.large] : [.medium, .large])
@@ -131,11 +156,19 @@ struct ProfileView: View {
             
             HStack(spacing: 12) {
                 if let age = profile.age {
-                    infoTile(icon: "calendar", title: "Age", value: age, color: .blue)
+                    if isEditMode {
+                        editableInfoTile(icon: "calendar", title: "Age", text: $editAge, color: .blue)
+                    } else {
+                        infoTile(icon: "calendar", title: "Age", value: age, color: .blue)
+                    }
                 }
                 
                 if let gender = profile.gender {
-                    infoTile(icon: "person.fill", title: "Gender", value: gender, color: .purple)
+                    if isEditMode {
+                        editableInfoTile(icon: "person.fill", title: "Gender", text: $editGender, color: .purple)
+                    } else {
+                        infoTile(icon: "person.fill", title: "Gender", value: gender, color: .purple)
+                    }
                 }
             }
         }
@@ -158,6 +191,31 @@ struct ProfileView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func editableInfoTile(icon: String, title: String, text: Binding<String>, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundStyle(color)
+                
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
+            
+            TextField(title, text: text)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+                .textFieldStyle(.plain)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -229,53 +287,122 @@ struct ProfileView: View {
     private func valuableTile(_ item: String) -> some View {
         let isAutoDetected = deviceDetection.detectedDevices.contains(item)
         
-        return VStack(spacing: 10) {
-            ZStack(alignment: .topTrailing) {
+        return ZStack(alignment: .topTrailing) {
+            VStack(spacing: 10) {
                 Image(systemName: itemIcon(for: item))
                     .font(.system(size: 32))
                     .foregroundStyle(.blue)
                     .frame(maxWidth: .infinity)
                 
-                if isAutoDetected {
-                    Text("✨")
-                        .font(.caption2)
-                }
+                Text(item)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.8)
             }
+            .frame(height: 100)
+            .padding(12)
+            .clipShape(.rect(cornerRadius: 16, style: .continuous))
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
             
-            Text(item)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.8)
+            if isEditMode {
+                Button {
+                    removeValuableItem(item)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.white, .red)
+                }
+                .padding(8)
+            } else if isAutoDetected {
+                Text("✨")
+                    .font(.caption2)
+                    .padding(8)
+            }
         }
-        .frame(height: 100)
-        .padding(12)
-        .clipShape(.rect(cornerRadius: 16, style: .continuous))
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func riskLevelSection(_ riskLevel: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Risk Assessment")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            
+            if isEditMode {
+                editableRiskLevelBadge()
+            } else {
+                riskLevelBadge(riskLevel)
+            }
+        }
     }
     
     private func riskLevelBadge(_ riskLevel: String) -> some View {
         let (color, icon) = riskLevelInfo(riskLevel)
         
-        return HStack(spacing: 8) {
+        return HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.subheadline)
-            
-            Text("Risk Level:")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            
-            Text(riskLevel.capitalized)
-                .font(.subheadline)
-                .fontWeight(.semibold)
+                .font(.title2)
                 .foregroundStyle(color)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Risk Level")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                
+                Text(riskLevel.capitalized)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(color)
+            }
+            
+            Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .clipShape(.rect(cornerRadius: 12, style: .continuous))
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func editableRiskLevelBadge() -> some View {
+        let levels: [String] = ["low", "medium", "high"]
+        
+        return VStack(spacing: 12) {
+            ForEach(levels, id: \.self) { level in
+                let (color, icon) = riskLevelInfo(level)
+                let isSelected = editRiskLevel == level
+                
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        editRiskLevel = level
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: icon)
+                            .font(.title3)
+                            .foregroundStyle(isSelected ? color : .secondary)
+                        
+                        Text(level.capitalized)
+                            .font(.body)
+                            .fontWeight(isSelected ? .semibold : .regular)
+                            .foregroundStyle(isSelected ? color : .primary)
+                        
+                        Spacer()
+                        
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(color)
+                        }
+                    }
+                    .padding(14)
+                    .clipShape(.rect(cornerRadius: 12, style: .continuous))
+                    .glassEffect(.regular, in: .rect(cornerRadius: 12, style: .continuous))
+                    .opacity(isSelected ? 1.0 : 0.7)
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
     
     private func riskLevelInfo(_ level: String) -> (Color, String) {
@@ -296,10 +423,40 @@ struct ProfileView: View {
             userProfile = savedProfile
             // Update with any new detected devices
             updateProfileWithDetectedDevices(deviceDetection.detectedDevices)
+            // Initialize edit state
+            loadEditState(from: savedProfile)
         } else {
             // Create new profile with detected devices
             var profile = UserProfile()
             profile.valuableItems = deviceDetection.detectedDevices
+            profile.save()
+            userProfile = profile
+            loadEditState(from: profile)
+        }
+    }
+    
+    private func loadEditState(from profile: UserProfile) {
+        editAge = profile.age ?? ""
+        editGender = profile.gender ?? ""
+        editRiskLevel = profile.riskLevel
+    }
+    
+    private func saveEdits() {
+        guard var profile = userProfile else { return }
+        
+        profile.age = editAge.isEmpty ? nil : editAge
+        profile.gender = editGender.isEmpty ? nil : editGender
+        profile.riskLevel = editRiskLevel
+        
+        profile.save()
+        userProfile = profile
+    }
+    
+    private func removeValuableItem(_ item: String) {
+        guard var profile = userProfile else { return }
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            profile.valuableItems.removeAll { $0 == item }
             profile.save()
             userProfile = profile
         }
@@ -372,6 +529,9 @@ struct ProfileView: View {
                 
                 // Save the profile to UserDefaults
                 profile.save()
+                
+                // Update edit state
+                self.loadEditState(from: profile)
                 
                 print("Profile analysis complete:")
                 print("Age: \(profile.age ?? "unknown")")
