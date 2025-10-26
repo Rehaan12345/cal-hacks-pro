@@ -64,15 +64,15 @@ class LocationMetadata: ObservableObject {
             throw URLError(.badURL)
         }
         
+        let profile = UserProfile.load()
+        let userStats: [String: String] = profile?.toAdditionalProps() ?? [:]
+        
         // Build JSON body
         let body: [String: Any] = [
                 "neighborhood": adaptedNeighborhood,
                 "city": city,
                 "state": state,
-                "user_stats": [
-                    "additionalProp1": "",
-                    "additionalProp2": ""
-                ],
+                "user_stats": userStats,
                 "transport": "walk",
                 "time": currentISODate
             ]
@@ -156,7 +156,7 @@ class LocationMetadata: ObservableObject {
                 try? await Task.sleep(nanoseconds: 20)
             }
             
-            self.dangerScore = Int(safetyMetric(crimeCount: recentEvents!.count, numPStations: policeStations!.count, safestEarliestTime: 5, safestLatestTime: 19))
+            self.dangerScore = Int(safetyMetric(crimeCount: recentEvents!.count, numPStations: policeStations!.count, safestEarliestTime: analysis!.safestHours.first ?? 6, safestLatestTime: analysis!.safestHours.last ?? 18))
             
             if let dangerScore {
                 switch(dangerScore) {

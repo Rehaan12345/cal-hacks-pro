@@ -56,7 +56,41 @@ struct UserProfile: Codable {
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         print("🗑️ User profile cleared from UserDefaults")
     }
+    
+    
 }
+
+extension UserProfile {
+    func toAdditionalProps() -> [String: String] {
+        var props: [String] = []
+        
+        if let age = age { props.append("Age: \(age)") }
+        if let gender = gender { props.append("Gender: \(gender)") }
+        
+        if !wealthIndicators.isEmpty {
+            props.append("Wealth Indicators: \(wealthIndicators.joined(separator: ", "))")
+        }
+        
+        if !valuableItems.isEmpty {
+            props.append("Valuable Items: \(valuableItems.joined(separator: ", "))")
+        }
+        
+        props.append("Symbol: \(sfSymbolIcon)")
+        props.append("Risk Level: \(riskLevel)")
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        props.append("Extracted At: \(formatter.string(from: extractedAt))")
+        
+        // Turn into ["additionalProp1": "…", "additionalProp2": "…", …]
+        var dict: [String: String] = [:]
+        for (index, prop) in props.enumerated() {
+            dict["additionalProp\(index + 1)"] = prop
+        }
+        return dict
+    }
+}
+
 
 // Response structure from Gemini
 struct GeminiResponse: Codable {
