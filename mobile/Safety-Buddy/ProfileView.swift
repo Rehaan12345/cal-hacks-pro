@@ -41,7 +41,7 @@ struct ProfileView: View {
                         .padding(20)
                         .frame(maxWidth: .infinity)
                         .clipShape(.rect(cornerRadius: 20, style: .continuous))
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20, style: .continuous))
+                        .background(.ultraThickMaterial, in: .rect(cornerRadius: 20, style: .continuous))
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
                     
@@ -163,7 +163,7 @@ struct ProfileView: View {
                         .font(.body)
                         .padding(16)
                         .clipShape(.rect(cornerRadius: 12, style: .continuous))
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12, style: .continuous))
+                        .background(.ultraThickMaterial, in: .rect(cornerRadius: 12, style: .continuous))
                 }
                 .padding(.horizontal, 20)
                 
@@ -256,7 +256,7 @@ struct ProfileView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .clipShape(.rect(cornerRadius: 16, style: .continuous))
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+        .background(.ultraThickMaterial, in: .rect(cornerRadius: 16, style: .continuous))
     }
     
     private func editableInfoTile(icon: String, title: String, text: Binding<String>, color: Color) -> some View {
@@ -281,7 +281,7 @@ struct ProfileView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .clipShape(.rect(cornerRadius: 16, style: .continuous))
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+        .background(.ultraThickMaterial, in: .rect(cornerRadius: 16, style: .continuous))
     }
     
     private func wealthIndicatorsSection(_ indicators: [String]) -> some View {
@@ -312,7 +312,7 @@ struct ProfileView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .clipShape(.rect(cornerRadius: 12, style: .continuous))
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12, style: .continuous))
+            .background(.ultraThickMaterial, in: .rect(cornerRadius: 16, style: .continuous))
     }
     
     private func valuableItemsSection(_ items: [String]) -> some View {
@@ -374,7 +374,7 @@ struct ProfileView: View {
             .frame(height: 100)
             .padding(12)
             .clipShape(.rect(cornerRadius: 16, style: .continuous))
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+            .background(.ultraThickMaterial, in: .rect(cornerRadius: 16, style: .continuous))
             
             if isEditMode {
                 Button {
@@ -386,8 +386,8 @@ struct ProfileView: View {
                 }
                 .padding(8)
             } else if isAutoDetected {
-                Text("✨")
-                    .font(.caption2)
+                Image(systemName: "sparkles")
+                    .font(.body)
                     .padding(8)
             }
         }
@@ -427,7 +427,7 @@ struct ProfileView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .clipShape(.rect(cornerRadius: 16, style: .continuous))
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+        .background(.ultraThickMaterial, in: .rect(cornerRadius: 16, style: .continuous))
     }
     
     private func riskLevelInfo(_ level: String) -> (Color, String) {
@@ -532,7 +532,7 @@ struct ProfileView: View {
             return "iphone"
         } else if lowercased.contains("laptop") || lowercased.contains("macbook") || lowercased.contains("computer") {
             return "laptopcomputer"
-        } else if lowercased.contains("airpods") || lowercased.contains("earbuds") || lowercased.contains("headphones") {
+        } else if lowercased.contains("airpods") || lowercased.contains("earbuds") || lowercased.contains("headphones") || lowercased.contains("earphones") {
             return "airpodspro"
         } else if lowercased.contains("wallet") || lowercased.contains("purse") {
             return "creditcard.fill"
