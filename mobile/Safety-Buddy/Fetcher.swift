@@ -18,6 +18,7 @@ class LocationMetadata: ObservableObject {
     
     @Published var crimeRecsResponse: [String]?
     @Published var policeStations: [PoliceStation]?
+    @Published var dangerScore: Int?
     
     init(latitude: Double, longitude: Double, neighborhood: String, city: String = "San Francisco", state: String = "California") {
         self.latitude = latitude
@@ -28,6 +29,16 @@ class LocationMetadata: ObservableObject {
         
         setCrimeRecommendations()
         setNearbyPoliceStations()
+        setDangerScore()
+    }
+    
+    var currentISODate: String {
+        let date = Date()
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let isoString = formatter.string(from: date)
+        
+        return isoString
     }
     
     var adaptedNeighborhood: String {
@@ -47,11 +58,6 @@ class LocationMetadata: ObservableObject {
             throw URLError(.badURL)
         }
         
-        let date = Date()
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let isoString = formatter.string(from: date)
-        
         // Build JSON body
         let body: [String: Any] = [
                 "neighborhood": adaptedNeighborhood,
@@ -62,7 +68,7 @@ class LocationMetadata: ObservableObject {
                     "additionalProp2": ""
                 ],
                 "transport": "walk",
-                "time": isoString
+                "time": currentISODate
             ]
         
         var request = URLRequest(url: url)
@@ -136,4 +142,59 @@ class LocationMetadata: ObservableObject {
             return stations.sorted { $0.distance < $1.distance }
         }
     
+    func setDangerScore() {
+        Task {
+            self.dangerScore = try? await fetchDangerScore()
+        }
+    }
+
+    func fetchDangerScore() async throws -> Int {
+        guard let url = URL(string: "https://cal-hacks-pro-backend.vercel.app/scraper/safety-metric/") else {
+            throw URLError(.badURL)
+        }
+
+        // Build JSON body using [String: Any]
+        let body: [String: Any] = [
+            "crime": [
+                "coords": [String(latitude), String(longitude)],
+                "neighborhood": neighborhood,
+                "city": city,
+                "state": state,
+                "user_stats": [
+                    "additionalProp1": "string",
+                    "additionalProp2": "string",
+                    "additionalProp3": "string"
+                ],
+                "transport": "walk",
+                "time": currentISODate
+            ],
+            "time": [
+                "safest_earliest_time": 14,
+                "safest_latest_time": 20
+            ]
+        ]
+
+        // Prepare request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+
+        // Send request
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        // Validate response
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        // Parse JSON
+        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let result = json["data"] as? Int {
+            return result
+        } else {
+            throw URLError(.cannotParseResponse)
+        }
+    }
+
 }

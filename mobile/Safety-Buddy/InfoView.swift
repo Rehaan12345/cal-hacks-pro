@@ -67,11 +67,15 @@ struct InfoView: View {
     // MARK: - Sections
     private var safetyScoreSection: some View {
         VStack(spacing: 8) {
-            Text("92")
-                .font(.system(size: 72, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+            if let rating = metadata.dangerScore {
+                Text("\(rating)")
+                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+            } else {
+                ProgressView()
+            }
             
-            Text("Safety Score")
+            Text("Risk Level")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
