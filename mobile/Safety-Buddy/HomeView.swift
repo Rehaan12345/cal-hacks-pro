@@ -38,8 +38,21 @@ struct HomeView: View {
     @Namespace private var searchAnimation
     
     @State private var safetyTipsAreExpanded = false
+
     
+
     @State private var metadata: LocationMetadata? = nil
+
+    // Selfie camera states
+    @State private var capturedPhoto: UIImage?
+    @State private var isProcessing = false
+
+    @State private var userProfile: UserProfile?
+    @State private var showProfileError = false
+    @State private var profileErrorMessage = ""
+
+
+    @State private var showProfile = false
     
     var body: some View {
         NavigationStack {
@@ -74,7 +87,6 @@ struct HomeView: View {
                 if let metadata {
                     SafetyTipsFeed(metadata: metadata, isExpanded: $safetyTipsAreExpanded)
                 }
-                
                 
                 Spacer()
             }
@@ -275,9 +287,21 @@ struct HomeView: View {
                 .padding(.bottom, isSearchFocused ? 10 : 0)
                 .animation(.spring, value: isSearchFocused)
             }
+            .toolbar(content: {
+                Button {
+                    showProfile.toggle()
+                } label: {
+                    Image(systemName: "person.fill")
+                        .foregroundStyle(.primary)
+                        .bold()
+                }
+
+            })
         }
         .animation(.spring, value: safetyTipsAreExpanded)
-        
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
+        }
     }
 }
 
