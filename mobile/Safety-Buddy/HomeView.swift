@@ -32,14 +32,15 @@ extension SafetyState {
 
 struct HomeView: View {
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var sosHandler = SOSHandler()
     @State private var isSearchExpanded = false
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     @Namespace private var searchAnimation
     
     @State private var safetyTipsAreExpanded = false
-
-    
+    @State private var showSOSControl = false
+    @State private var sosControlMode: SOSControlMode = .whistle
 
     @State private var metadata: LocationMetadata? = nil
 
@@ -50,7 +51,6 @@ struct HomeView: View {
     @State private var userProfile: UserProfile?
     @State private var showProfileError = false
     @State private var profileErrorMessage = ""
-
 
     @State private var showProfile = false
     
@@ -256,19 +256,23 @@ struct HomeView: View {
                     
                         Menu {
                             Button {
-                                SOSHandler().call911()
+                                sosHandler.call911()
                             } label: {
                                 Image(systemName: "car")
                                 Text("Call Services")
                             }
                             Button {
-                                SOSHandler().whistle()
+                                sosControlMode = .whistle
+                                sosHandler.whistle()
+                                showSOSControl = true
                             } label: {
                                 Image(systemName: "horn")
                                 Text("Emergency Whistle")
                             }
                             Button {
-                                SOSHandler().flash()
+                                sosControlMode = .flash
+                                sosHandler.flash()
+                                showSOSControl = true
                             } label: {
                                 Image(systemName: "flashlight.on.fill")
                                 Text("Flash SOS")
@@ -302,6 +306,149 @@ struct HomeView: View {
         .sheet(isPresented: $showProfile) {
             ProfileView()
         }
+        .sheet(isPresented: $showSOSControl) {
+            SOSControlSheet(sosHandler: sosHandler, showSheet: $showSOSControl, mode: sosControlMode)
+                .presentationDetents([.fraction(0.25)])
+                .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+enum SOSControlMode {
+    case whistle
+    case flash
+}
+
+struct SOSControlSheet: View {
+    @ObservedObject var sosHandler: SOSHandler
+    @Binding var showSheet: Bool
+    let mode: SOSControlMode
+    
+    private var isWhistleMode: Bool {
+        mode == .whistle
+    }
+    
+    private var isActive: Bool {
+        isWhistleMode ? sosHandler.isWhistleActive : sosHandler.isFlashActive
+    }
+    
+    private var currentLevel: Float {
+        isWhistleMode ? sosHandler.whistleVolume : sosHandler.flashBrightness
+    }
+    
+    private var isAtMaxLevel: Bool {
+        currentLevel >= 1.0
+    }
+    
+    private var isAtMinLevel: Bool {
+        if isWhistleMode {
+            return currentLevel <= 0.0
+        } else {
+            return currentLevel <= SOSHandler.minBrightness
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                Text(isWhistleMode ? "Emergency Whistle" : "Flash SOS")
+                    .font(.title3)
+                    .bold()
+                Spacer()
+                
+                // Close button
+                Button {
+                    // Stop features when closing
+                    if sosHandler.isWhistleActive {
+                        sosHandler.stopWhistle()
+                    }
+                    if sosHandler.isFlashActive {
+                        sosHandler.stopFlash()
+                    }
+                    showSheet = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.gray)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+            .padding()
+            // Control section
+            VStack(spacing: 16) {
+                // Slider for volume/brightness control
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: isWhistleMode ? "speaker.fill" : "sun.min")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        Slider(
+                            value: Binding(
+                                get: { Double(currentLevel) },
+                                set: { newValue in
+                                    if isWhistleMode {
+                                        sosHandler.adjustWhistleVolume(Float(newValue))
+                                    } else {
+                                        sosHandler.adjustFlashBrightness(Float(newValue))
+                                    }
+                                }
+                            ),
+                            in: Double(isWhistleMode ? 0.0 : SOSHandler.minBrightness)...1.0
+                        )
+                        .tint(isActive ? .blue : .gray)
+                        .disabled(!isActive)
+                        
+                        Image(systemName: isWhistleMode ? "speaker.wave.3.fill" : "sun.max.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+//                    Text(isWhistleMode ? "Volume" : "Brightness")
+//                        .font(.caption2)
+//                        .foregroundStyle(.secondary)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .clipShape(Capsule())
+                
+                // Stop/Start toggle button
+                Button {
+                    if isWhistleMode {
+                        if sosHandler.isWhistleActive {
+                            sosHandler.stopWhistle()
+                        } else {
+                            sosHandler.whistle()
+                        }
+                    } else {
+                        if sosHandler.isFlashActive {
+                            sosHandler.stopFlash()
+                        } else {
+                            sosHandler.flash()
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: isActive ? "stop.circle.fill" : "play.circle.fill")
+                            .font(.title2)
+                        Text(isActive ? "Stop" : "Start")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background((isActive ? Color.red : Color.green).opacity(0.2))
+                    .clipShape(Capsule())
+                }
+                .foregroundStyle(isActive ? .red : .green)
+            }
+            .padding(.horizontal)
+            
+            Spacer()
+        }
+        .animation(.easeInOut(duration: 0.2), value: isActive)
+        .animation(.easeInOut(duration: 0.2), value: currentLevel)
     }
 }
 
