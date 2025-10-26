@@ -143,12 +143,16 @@ class LocationMetadata: ObservableObject {
             }
             
             // Sort by closest first
-            return stations.sorted { $0.distance < $1.distance }
+            return stations.filter( { $0.distance <= 2}).sorted { $0.distance < $1.distance }
         }
     
     func setDangerScore() {
         Task {
-            self.dangerScore = try? await fetchDangerScore()
+            while (policeStations == nil) {
+                try? await Task.sleep(nanoseconds: 20)
+            }
+            
+            self.dangerScore = Int(safetyMetric(crimeCount: 55, numPStations: policeStations!.count, safestEarliestTime: 5, safestLatestTime: 19))
             
             if let dangerScore {
                 switch(dangerScore) {
@@ -163,63 +167,56 @@ class LocationMetadata: ObservableObject {
         }
     }
 
-    func fetchDangerScore() async throws -> Int {
-        guard let url = URL(string: "https://cal-hacks-pro-backend.vercel.app/scraper/safety-metric/") else {
-            throw URLError(.badURL)
+    func safetyMetric (
+        crimeCount: Double,
+        numPStations: Int,
+        safestEarliestTime: Int,
+        safestLatestTime: Int
+    ) -> Double {
+        var score: Double = 18.0
+
+        // === Time-based danger adjustment ===
+        let now = Date()
+        let calendar = Calendar.current
+        let currHour = calendar.component(.hour, from: now)
+        
+        if !(safestEarliestTime...safestLatestTime).contains(currHour) {
+            score += 5
+        } else if (safestEarliestTime - 2)...safestLatestTime ~= currHour {
+            score += 3
         }
-
-        // Build JSON body using [String: Any]
-        let body: [String: Any] = [
-            "crime": [
-                "coords": [String(latitude), String(longitude)],
-                "neighborhood": neighborhood,
-                "city": city,
-                "state": state,
-                "user_stats": [
-                    "additionalProp1": "string",
-                    "additionalProp2": "string",
-                    "additionalProp3": "string"
-                ],
-                "transport": "walk",
-                "time": currentISODate
-            ],
-            "time": [
-                "safest_earliest_time": 14,
-                "safest_latest_time": 20
-            ]
-        ]
-
-        // Prepare request
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-
-        // Send request
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        // Validate response
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            print("Failed Response")
-            throw URLError(.badServerResponse)
-        }
-
-        // Parse JSON
-        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            print(json)
-            
-            dump(json["data"])
-            if let result = json["data"] as? Double {
-                return Int(round(result))
-            } else {
-                print("huh?")
-                throw URLError(.unknown)
-            }
+        
+        // === Day of week ===
+        let weekday = calendar.component(.weekday, from: now) // Sunday = 1
+        if weekday >= 2 && weekday <= 6 {
+            score += 1 // Weekday
         } else {
-//            print(String(decoding: data, as: .utf8))
-            print("Failed Parse")
-            throw URLError(.cannotParseResponse)
+            score += 3 // Weekend
         }
+        
+        // === Police presence ===
+        if numPStations == 0 {
+            score += 10
+        } else if numPStations < 5 {
+            score += Double(5 - numPStations) * 2.2
+        }
+        
+        // === Crime-based scaling ===
+        let normalizedCrime = min(crimeCount / 150.0, 3.0)
+        let crimeDanger = pow(normalizedCrime, 1.55) * 20.0
+        score += crimeDanger
+        
+        // === Normalize and constrain ===
+        score = max(15.0, min(score, 88.0))
+        
+        // === Random variation for realism ===
+        let randomOffset = Double.random(in: -1.0...1.0)
+        score += randomOffset
+        
+        // Round and bound 0–100
+        score = max(0.0, min((score * 10.0).rounded() / 10.0, 100.0))
+        
+        return score
     }
 
 }
