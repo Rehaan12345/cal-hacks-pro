@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+internal import _LocationEssentials
 
 enum SafetyState: String {
     case safe = "Safe"
@@ -37,6 +38,8 @@ struct HomeView: View {
     
     @State private var safetyTipsAreExpanded = false
     
+    @State private var metadata: LocationMetadata? = nil
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -51,17 +54,19 @@ struct HomeView: View {
                 .bold()
                 .foregroundStyle(.white)
                     
-                NavigationLink(destination: InfoView()) {
-                    
-                    HStack {
-                        Text(currentState.rawValue)
-                            .font(.system(size: 54, weight: .bold))
-                            .foregroundStyle(.white)
+                if let metadata {
+                    NavigationLink(destination: InfoView(metadata: metadata)) {
                         
-                        Image(systemName: "chevron.right")
-                            .font(.title)
-                            .foregroundStyle(.secondary)
-                            .bold()
+                        HStack {
+                            Text(currentState.rawValue)
+                                .font(.system(size: 54, weight: .bold))
+                                .foregroundStyle(.white)
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.title)
+                                .foregroundStyle(.secondary)
+                                .bold()
+                        }
                     }
                 }
                 
@@ -83,6 +88,18 @@ struct HomeView: View {
             .background(
                 currentState.backgroundColor.gradient
             )
+            .onChange(of: metadata?.crimeRecsResponse == nil, { oldValue, newValue in
+                dump(metadata?.crimeRecsResponse)
+            })
+            .onChange(of: locationManager.location, { oldValue, newValue in
+                Task {
+                    while(locationManager.neighborhoodName == nil) {
+                        try await Task.sleep(nanoseconds: 20)
+                    }
+                    
+                    metadata = LocationMetadata(latitude: newValue!.coordinate.latitude, longitude: newValue!.coordinate.longitude, neighborhood: locationManager.neighborhoodName!)
+                }
+            })
             .overlay(alignment: .bottom) {
                 
                 

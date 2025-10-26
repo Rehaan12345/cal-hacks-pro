@@ -33,6 +33,7 @@ struct StatCard: Identifiable {
 // MARK: - Home View
 struct InfoView: View {
     @Namespace private var namespace
+    @ObservedObject var metadata: LocationMetadata
     
     // MARK: - Data
     private let quotes = [
@@ -76,6 +77,7 @@ struct InfoView: View {
         }
         .padding(.bottom, 40)
     }
+    
     private var statsGrid: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
@@ -96,6 +98,11 @@ struct InfoView: View {
                 .matchedTransitionSource(id: "recentEvents", in: namespace)
                 
                 statCardView(stats[3])
+            }
+            
+            if let policeStations = metadata.policeStations {
+                let value = String(format: "%.2f", policeStations.first?.distance ?? -1.00)
+                statCardView(StatCard(value: value == "-1.00" ? "None nearby!" : "\(value) miles", label: "Nearest Police Station", icon: "car.fill", tint: .purple))
             }
         }
         .padding(.horizontal)
@@ -201,9 +208,4 @@ struct InfoView: View {
         default: return "link"
         }
     }
-}
-
-
-#Preview {
-    InfoView()
 }
