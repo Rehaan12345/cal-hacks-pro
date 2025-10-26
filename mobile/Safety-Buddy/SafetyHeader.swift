@@ -17,10 +17,12 @@ struct SafetyHeader: View {
                     .font(.system(size: 54, weight: .bold))
                     .foregroundStyle(.white)
                 
-                Image(systemName: "chevron.right")
-                    .font(.title)
-                    .foregroundStyle(.secondary)
-                    .bold()
+                if metadata.safetyState != .loading {
+                    Image(systemName: "chevron.right")
+                        .font(.title)
+                        .foregroundStyle(.white)
+                        .bold()
+                }
             }
         }
     }

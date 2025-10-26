@@ -72,8 +72,8 @@ struct HomeView: View {
                     SafetyHeader(metadata: metadata)
                 } else {
                     Text("Loading...")
-                        .font(.title)
-                        .bold()
+                        .font(.system(size: 54, weight: .bold))
+                        .foregroundStyle(.white)
                 }
                 
                 Spacer()

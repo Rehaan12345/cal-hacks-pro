@@ -49,6 +49,7 @@ struct CircularMapView: View {
             }
             .allowsHitTesting(false)
         }
+        .shadow(color: .black.opacity(0.5), radius: 10)
         .matchedTransitionSource(id: "map", in: nm)
         .task {
             startLocationTracking()
@@ -70,7 +71,6 @@ struct CircularMapView: View {
         .onMapCameraChange { _ in handleMapInteraction() }
         .frame(width: mapSize, height: mapSize)
         .clipShape(Circle())
-        .shadow(color: .black.opacity(0.15), radius: 10)
         .task {
             updateCamera(for: location, heading: locationManager.heading, animated: false)
         }
