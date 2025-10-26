@@ -14,15 +14,12 @@ struct ProfileView: View {
     @State private var userProfile: UserProfile?
     @State private var showProfileError = false
     @State private var profileErrorMessage = ""
+    @State private var isCameraButtonPressed = false
     
     var body: some View {
         NavigationStack {
             VStack {
-                NavigationLink(destination: SelfieCamera(capturedPhoto: $capturedPhoto, isProcessing: $isProcessing)) {
-                    Image(systemName: "person.fill")
-                        .foregroundStyle(.primary)
-                        .bold()
-                }
+
                 
                 // Processing Photo Indicator
                 if isProcessing {
@@ -41,8 +38,21 @@ struct ProfileView: View {
                 }
                 
                 Text("This is a sheet!")
-                    .presentationDetents([.fraction(0.2),.fraction(0.5), .fraction(0.7)])
+                    .presentationDetents(isCameraButtonPressed ? [.large] : [.fraction(0.5), .fraction(0.7)])
                     .presentationDragIndicator(.visible)
+            }
+            .toolbar {
+                NavigationLink(
+                    destination: SelfieCamera(
+                        capturedPhoto: $capturedPhoto,
+                        isProcessing: $isProcessing
+                    ),
+                    isActive: $isCameraButtonPressed
+                ) {
+                    Image(systemName: "camera")
+                        .foregroundStyle(.primary)
+                        .bold()
+                }
             }
         }
         .onChange(of: capturedPhoto) { _, newPhoto in
