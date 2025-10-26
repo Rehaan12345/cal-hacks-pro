@@ -11,27 +11,11 @@ struct ProfileView: View {
     
     @State private var capturedPhoto: UIImage?
     @State private var isProcessing = false
-    @State private var userProfile: UserProfile? = UserProfile.load() ?? {
-        // Mock data if no saved profile exists
-        var profile = UserProfile()
-        profile.valuableItems = [
-            "iPhone 15 Pro",
-            "Apple Watch Ultra",
-            "AirPods Pro",
-            "Designer Wallet",
-            "MacBook Pro",
-            "Ray-Ban Sunglasses"
-        ]
-        profile.age = "25-30"
-        profile.gender = "Male"
-        profile.wealthIndicators = ["Premium tech devices", "Designer accessories"]
-        profile.riskLevel = "medium"
-        profile.save() // Save the mock data
-        return profile
-    }()
+    @State private var userProfile: UserProfile?
     @State private var showProfileError = false
     @State private var profileErrorMessage = ""
     @State private var isCameraButtonPressed = false
+    @StateObject private var deviceDetection = DeviceDetectionService.shared
     
     var body: some View {
         NavigationStack {
@@ -111,12 +95,18 @@ struct ProfileView: View {
             .presentationDetents(isCameraButtonPressed ? [.large] : [.fraction(0.5), .fraction(0.7)])
             .presentationDragIndicator(.visible)
         }
+        .onAppear {
+            loadOrCreateProfile()
+        }
         .onChange(of: capturedPhoto) { _, newPhoto in
             if let photo = newPhoto {
                 Task {
                     await analyzePhoto(photo)
                 }
             }
+        }
+        .onChange(of: deviceDetection.detectedDevices) { _, newDevices in
+            updateProfileWithDetectedDevices(newDevices)
         }
         .alert("Profile Analysis Error", isPresented: $showProfileError) {
             Button("OK", role: .cancel) { }
@@ -125,17 +115,56 @@ struct ProfileView: View {
         }
     }
     
+    // MARK: - Profile Management
+    
+    private func loadOrCreateProfile() {
+        if let savedProfile = UserProfile.load() {
+            userProfile = savedProfile
+            // Update with any new detected devices
+            updateProfileWithDetectedDevices(deviceDetection.detectedDevices)
+        } else {
+            // Create new profile with detected devices
+            var profile = UserProfile()
+            profile.valuableItems = deviceDetection.detectedDevices
+            profile.save()
+            userProfile = profile
+        }
+    }
+    
+    private func updateProfileWithDetectedDevices(_ devices: [String]) {
+        guard var profile = userProfile else { return }
+        
+        // Add detected devices that aren't already in the list
+        for device in devices {
+            if !profile.valuableItems.contains(device) {
+                profile.valuableItems.insert(device, at: 0)
+            }
+        }
+        
+        profile.save()
+        userProfile = profile
+    }
+    
     // MARK: - Valuable Row
     private func valuableRow(_ item: String) -> some View {
-        HStack(spacing: 10) {
+        let isAutoDetected = deviceDetection.detectedDevices.contains(item)
+        
+        return HStack(spacing: 10) {
             Image(systemName: itemIcon(for: item))
                 .foregroundStyle(.blue)
                 .font(.system(size: 20))
                 .frame(width: 32, height: 32)
             
-            Text(item)
-                .font(.body)
-                .foregroundStyle(.primary)
+            HStack(spacing: 4) {
+                Text(item)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                
+                if isAutoDetected {
+                    Text("✨")
+                        .font(.caption)
+                }
+            }
             
             Spacer()
         }
@@ -176,9 +205,20 @@ struct ProfileView: View {
         print("Starting photo analysis...")
         
         do {
-            let profile = try await GeminiService.shared.analyzePhoto(photo)
+            var profile = try await GeminiService.shared.analyzePhoto(photo)
             
             await MainActor.run {
+                // Prepend detected devices to the valuable items
+                var allItems = deviceDetection.detectedDevices
+                
+                // Add photo-detected items that aren't already in detected devices
+                for item in profile.valuableItems {
+                    if !allItems.contains(item) {
+                        allItems.append(item)
+                    }
+                }
+                
+                profile.valuableItems = allItems
                 self.userProfile = profile
                 self.isProcessing = false
                 
