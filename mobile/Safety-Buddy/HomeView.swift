@@ -253,38 +253,50 @@ struct HomeView: View {
                     
                     if !isSearchExpanded {
                         Spacer()
-                    
-                        Menu {
-                            Button {
-                                sosHandler.call911()
+                        
+                        if locationManager.isAtActualLocation {
+                            Menu {
+                                Button {
+                                    sosHandler.call911()
+                                } label: {
+                                    Image(systemName: "car")
+                                    Text("Call Services")
+                                }
+                                Button {
+                                    sosControlMode = .whistle
+                                    sosHandler.whistle()
+                                    showSOSControl = true
+                                } label: {
+                                    Image(systemName: "horn")
+                                    Text("Emergency Whistle")
+                                }
+                                Button {
+                                    sosControlMode = .flash
+                                    sosHandler.flash()
+                                    showSOSControl = true
+                                } label: {
+                                    Image(systemName: "flashlight.on.fill")
+                                    Text("Flash SOS")
+                                }
                             } label: {
-                                Image(systemName: "car")
-                                Text("Call Services")
+                                Image(systemName: "sos")
+                                    .foregroundStyle(.primary)
+                                    .bold()
+                                    .frame(width: 60, height: 60)
+                                    .glassEffect(.regular, in: .circle)
                             }
+                            .tint(.primary)
+                        } else if metadata?.$analysis != nil {
                             Button {
-                                sosControlMode = .whistle
-                                sosHandler.whistle()
-                                showSOSControl = true
+                                locationManager.resetToCurrentLocation()
                             } label: {
-                                Image(systemName: "horn")
-                                Text("Emergency Whistle")
+                                Image(systemName: "location.fill")
+                                    .foregroundStyle(.primary)
+                                    .bold()
+                                    .frame(width: 60, height: 60)
+                                    .glassEffect(.regular, in: .circle)
                             }
-                            Button {
-                                sosControlMode = .flash
-                                sosHandler.flash()
-                                showSOSControl = true
-                            } label: {
-                                Image(systemName: "flashlight.on.fill")
-                                Text("Flash SOS")
-                            }
-                        } label: {
-                            Image(systemName: "sos")
-                                .foregroundStyle(.primary)
-                                .bold()
-                                .frame(width: 60, height: 60)
-                                .glassEffect(.regular, in: .circle)
                         }
-                        .tint(.primary)
                     }
                 }
                 .padding(.horizontal, isSearchFocused ? 20 : 40)
