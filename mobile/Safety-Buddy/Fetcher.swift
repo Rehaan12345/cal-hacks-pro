@@ -19,6 +19,8 @@ class LocationMetadata: ObservableObject {
     @Published var crimeRecsResponse: [String]?
     @Published var policeStations: [PoliceStation]?
     @Published var dangerScore: Int?
+    @Published var recentEvents: [RecentEvent]?
+
     
     init(latitude: Double, longitude: Double, neighborhood: String, city: String = "San Francisco", state: String = "California") {
         self.latitude = latitude
@@ -29,6 +31,7 @@ class LocationMetadata: ObservableObject {
         
         setCrimeRecommendations()
         setNearbyPoliceStations()
+        setRecentEvents()
         setDangerScore()
     }
     
@@ -148,11 +151,11 @@ class LocationMetadata: ObservableObject {
     
     func setDangerScore() {
         Task {
-            while (policeStations == nil) {
+            while (policeStations == nil || recentEvents == nil) {
                 try? await Task.sleep(nanoseconds: 20)
             }
             
-            self.dangerScore = Int(safetyMetric(crimeCount: 55, numPStations: policeStations!.count, safestEarliestTime: 5, safestLatestTime: 19))
+            self.dangerScore = Int(safetyMetric(crimeCount: recentEvents!.count, numPStations: policeStations!.count, safestEarliestTime: 5, safestLatestTime: 19))
             
             if let dangerScore {
                 switch(dangerScore) {
@@ -168,7 +171,7 @@ class LocationMetadata: ObservableObject {
     }
 
     func safetyMetric (
-        crimeCount: Double,
+        crimeCount: Int,
         numPStations: Int,
         safestEarliestTime: Int,
         safestLatestTime: Int
@@ -202,7 +205,7 @@ class LocationMetadata: ObservableObject {
         }
         
         // === Crime-based scaling ===
-        let normalizedCrime = min(crimeCount / 150.0, 3.0)
+        let normalizedCrime = min(Double(crimeCount) / 150, 3.0)
         let crimeDanger = pow(normalizedCrime, 1.55) * 20.0
         score += crimeDanger
         
@@ -218,5 +221,43 @@ class LocationMetadata: ObservableObject {
         
         return score
     }
+    
+    // MARK: - Recent Events
 
+    func setRecentEvents() {
+        Task {
+            self.recentEvents = try? await fetchRecentEvents()
+        }
+    }
+
+    func fetchRecentEvents() async throws -> [RecentEvent] {
+        guard let encodedNeighborhood = adaptedNeighborhood.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://cal-hacks-pro-backend.vercel.app/scraper/scrape-civic-hub/?neighborhood=\(encodedNeighborhood)") else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "accept")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        // Try a forgiving decode
+        do {
+            let decoder = JSONDecoder()
+            let events = try decoder.decode([RecentEvent].self, from: data)
+            return events
+        } catch {
+            // Fallback: decode loosely, skipping bad objects
+            let rawArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
+            let validData = rawArray.compactMap { dict -> RecentEvent? in
+                guard let jsonData = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
+                return try? JSONDecoder().decode(RecentEvent.self, from: jsonData)
+            }
+            return validData
+        }
+    }
 }

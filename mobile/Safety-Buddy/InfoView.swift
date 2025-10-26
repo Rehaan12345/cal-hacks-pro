@@ -43,12 +43,14 @@ struct InfoView: View {
         SocialQuote(userName: "ResidentJoe", source: "reddit", quote: "Been living here 5 years, always lock your car"),
     ]
     
-    private let stats = [
+    private var stats: [StatCard] {
+        [
         StatCard(value: "4 in 100", label: "Crime Rate", icon: "exclamationmark.shield.fill", tint: .pink),
         StatCard(value: "Mugging", label: "Primary Risk", icon: "figure.walk", tint: .orange),
-        StatCard(value: "4 | last 12 hrs", label: "Recent Events", icon: "person.badge.shield.exclamationmark.fill", tint: .yellow),
+        StatCard(value: "\(metadata.recentEvents?.count ?? 0)", label: "Recent Events", icon: "person.badge.shield.exclamationmark.fill", tint: .yellow),
         StatCard(value: Date.now.formatted(date: .omitted, time: .shortened), label: "Get's safer at", icon: "clock.fill", tint: .blue),
-    ]
+        ]
+    }
     
     // MARK: - Body
     var body: some View {
