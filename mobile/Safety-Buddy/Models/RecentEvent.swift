@@ -28,3 +28,16 @@ struct RecentEvent: Codable, Identifiable {
         case resolution = "Resolution"
     }
 }
+
+struct EventAnalysis {
+    let primaryCategory: String
+    let safestHours: [Int]
+    let riskiestHours: [Int]
+    let nextSaferHour: Int?
+    let nextRiskierHour: Int?
+    let currentRiskTrend: RiskTrend
+    
+    enum RiskTrend: String {
+        case saferSoon, riskierSoon, stable
+    }
+}

@@ -86,24 +86,35 @@ struct InfoView: View {
     
     private var statsGrid: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                ForEach(0..<2) { index in
-                    statCardView(stats[index])
-                }
-            }
             
-            HStack(spacing: 12) {
-                // Recent Events - tappable
-                NavigationLink {
-                    EventsFeedView()
-                        .navigationTransition(.zoom(sourceID: "recentEvents", in: namespace))
-                } label: {
-                    statCardView(stats[2])
+            if let analysis = metadata.analysis {
+                HStack(spacing: 12) {
+                    statCardView(StatCard(value: analysis.primaryCategory, label: "Primary Risk", icon: "exclamationmark.triangle.fill", tint: .orange))
+                    
+                    switch analysis.currentRiskTrend {
+                    case .saferSoon:
+                        statCardView(StatCard(value: "\(formattedHour(analysis.nextSaferHour))", label: "Gets safer at", icon: "clock.fill", tint: .blue))
+                    case .riskierSoon:
+                        statCardView(StatCard(value: "\(formattedHour(analysis.nextRiskierHour))", label: "Gets riskier at", icon: "clock.fill", tint: .blue))
+                    case .stable:
+                        Label("Risk levels are stable for now", systemImage: "minus.circle")
+                            .foregroundColor(.gray)
+                        statCardView(StatCard(value: "Stable", label: "Safety Forecast", icon: "clock.fill", tint: .blue))
+                    }
                 }
-                .buttonStyle(.plain)
-                .matchedTransitionSource(id: "recentEvents", in: namespace)
                 
-                statCardView(stats[3])
+                HStack(spacing: 12) {
+                    statCardView(stats[0])
+                    // Recent Events - tappable
+                    NavigationLink {
+                        EventsFeedView()
+                            .navigationTransition(.zoom(sourceID: "recentEvents", in: namespace))
+                    } label: {
+                        statCardView(stats[2])
+                    }
+                    .buttonStyle(.plain)
+                    .matchedTransitionSource(id: "recentEvents", in: namespace)
+                }
             }
             
             if let policeStations = metadata.policeStations {
@@ -214,4 +225,12 @@ struct InfoView: View {
         default: return "link"
         }
     }
+    
+    private func formattedHour(_ hour: Int?) -> String {
+            guard let hour else { return "—" }
+            let date = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date())!
+            let formatter = DateFormatter()
+            formatter.dateFormat = "h a"
+            return formatter.string(from: date)
+        }
 }

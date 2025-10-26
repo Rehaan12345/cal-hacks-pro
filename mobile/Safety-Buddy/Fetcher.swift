@@ -20,6 +20,7 @@ class LocationMetadata: ObservableObject {
     @Published var policeStations: [PoliceStation]?
     @Published var dangerScore: Int?
     @Published var recentEvents: [RecentEvent]?
+    @Published var analysis: EventAnalysis?
 
     
     init(latitude: Double, longitude: Double, neighborhood: String, city: String = "San Francisco", state: String = "California") {
@@ -227,6 +228,8 @@ class LocationMetadata: ObservableObject {
     func setRecentEvents() {
         Task {
             self.recentEvents = try? await fetchRecentEvents()
+            
+            self.analysis = analyzeRecentEvents()
         }
     }
 
@@ -260,4 +263,70 @@ class LocationMetadata: ObservableObject {
             return validData
         }
     }
+    
+    func analyzeRecentEvents() -> EventAnalysis? {
+        guard let recentEvents = recentEvents, !recentEvents.isEmpty else {
+            return nil
+        }
+        
+        // === 1️⃣ Count by category
+        let categoryCounts = Dictionary(grouping: recentEvents.compactMap { $0.categorySFPD }) { $0 }
+            .mapValues { $0.count }
+        let primaryCategory = categoryCounts.max(by: { $0.value < $1.value })?.key ?? "Unknown"
+        
+        // === 2️⃣ Group by hour
+        var hourCounts: [Int: Int] = [:]
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        
+        for event in recentEvents {
+            guard let date = formatter.date(from: event.time) else { continue }
+            let hour = Calendar.current.component(.hour, from: date)
+            hourCounts[hour, default: 0] += 1
+        }
+        
+        // Sort by count
+        let sortedByCount = hourCounts.sorted(by: { $0.value < $1.value })
+        let safestHours = sortedByCount.prefix(3).map { $0.key }
+        let riskiestHours = sortedByCount.suffix(3).map { $0.key }.reversed()
+        
+        // === 3️⃣ Compare to current time
+        let nowHour = Calendar.current.component(.hour, from: Date())
+        let currentIncidents = hourCounts[nowHour] ?? 0
+        
+        // Find next hours where risk changes
+        let nextSafer = (1...6).compactMap { offset -> Int? in
+            let h = (nowHour + offset) % 24
+            guard let count = hourCounts[h], count < currentIncidents else { return nil }
+            return h
+        }.first
+        
+        let nextRiskier = (1...6).compactMap { offset -> Int? in
+            let h = (nowHour + offset) % 24
+            guard let count = hourCounts[h], count > currentIncidents else { return nil }
+            return h
+        }.first
+        
+        // Determine current trend
+        let trend: EventAnalysis.RiskTrend
+        if let nextSafer = nextSafer, let nextRiskier = nextRiskier {
+            trend = nextSafer < nextRiskier ? .saferSoon : .riskierSoon
+        } else if nextSafer != nil {
+            trend = .saferSoon
+        } else if nextRiskier != nil {
+            trend = .riskierSoon
+        } else {
+            trend = .stable
+        }
+        
+        return EventAnalysis(
+            primaryCategory: primaryCategory,
+            safestHours: safestHours,
+            riskiestHours: [Int](riskiestHours),
+            nextSaferHour: nextSafer,
+            nextRiskierHour: nextRiskier,
+            currentRiskTrend: trend
+        )
+    }
+
 }
