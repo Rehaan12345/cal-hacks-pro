@@ -32,6 +32,8 @@ class LocationMetadata: ObservableObject {
         setDangerScore()
     }
     
+    @Published var safetyState = SafetyState.loading
+    
     var currentISODate: String {
         let date = Date()
         let formatter = ISO8601DateFormatter()
@@ -76,6 +78,8 @@ class LocationMetadata: ObservableObject {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("application/json", forHTTPHeaderField: "accept")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
@@ -145,6 +149,17 @@ class LocationMetadata: ObservableObject {
     func setDangerScore() {
         Task {
             self.dangerScore = try? await fetchDangerScore()
+            
+            if let dangerScore {
+                switch(dangerScore) {
+                case 1...60:
+                    self.safetyState = .safe
+                case 61...75:
+                    self.safetyState = .moderate
+                default:
+                    self.safetyState = .danger
+                }
+            }
         }
     }
 
@@ -185,14 +200,24 @@ class LocationMetadata: ObservableObject {
 
         // Validate response
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            print("Failed Response")
             throw URLError(.badServerResponse)
         }
 
         // Parse JSON
-        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let result = json["data"] as? Int {
-            return result
+        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            print(json)
+            
+            dump(json["data"])
+            if let result = json["data"] as? Double {
+                return Int(round(result))
+            } else {
+                print("huh?")
+                throw URLError(.unknown)
+            }
         } else {
+//            print(String(decoding: data, as: .utf8))
+            print("Failed Parse")
             throw URLError(.cannotParseResponse)
         }
     }

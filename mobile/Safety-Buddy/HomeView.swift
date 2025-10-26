@@ -10,8 +10,9 @@ internal import _LocationEssentials
 
 enum SafetyState: String {
     case safe = "Safe"
-    case danger = "Danger"
+    case danger = "Dangerous"
     case moderate = "Moderate"
+    case loading = "Loading..."
 }
 
 extension SafetyState {
@@ -23,13 +24,13 @@ extension SafetyState {
             return .red
         case .moderate:
             return .orange
+        case .loading:
+            return .gray
         }
     }
 }
 
 struct HomeView: View {
-    
-    @State var currentState: SafetyState = .safe
     @StateObject private var locationManager = LocationManager()
     @State private var isSearchExpanded = false
     @State private var searchText = ""
@@ -55,19 +56,11 @@ struct HomeView: View {
                 .foregroundStyle(.white)
                     
                 if let metadata {
-                    NavigationLink(destination: InfoView(metadata: metadata)) {
-                        
-                        HStack {
-                            Text(currentState.rawValue)
-                                .font(.system(size: 54, weight: .bold))
-                                .foregroundStyle(.white)
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.title)
-                                .foregroundStyle(.secondary)
-                                .bold()
-                        }
-                    }
+                    SafetyHeader(metadata: metadata)
+                } else {
+                    Text("Loading...")
+                        .font(.title)
+                        .bold()
                 }
                 
                 Spacer()
@@ -87,9 +80,14 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.bottom, 50)
-            .background(
-                currentState.backgroundColor.gradient
-            )
+            .background {
+                if let metadata {
+                    BackgroundColor(metadata: metadata)
+                } else {
+                    Color.gray
+                        .ignoresSafeArea()
+                }
+            }
             .onChange(of: metadata?.crimeRecsResponse == nil, { oldValue, newValue in
                 dump(metadata?.crimeRecsResponse)
             })
