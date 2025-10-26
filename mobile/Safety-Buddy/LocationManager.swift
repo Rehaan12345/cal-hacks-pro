@@ -50,7 +50,7 @@ class LocationManager: NSObject, ObservableObject {
     @Published var isSearching = false
     
     // Geocoding
-    @Published var neighborhoodName: String? = nil
+    @Published var neighborhoodName: String = ""
     
     // MARK: - Private
     private var lastGeocodeTime: Date?

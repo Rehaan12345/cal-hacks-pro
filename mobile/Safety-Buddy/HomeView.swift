@@ -47,8 +47,8 @@ struct HomeView: View {
                 Group {
                     if locationManager.isAtActualLocation {
                         Text("\(Image(systemName: "location.fill")) Current Location")
-                    } else if let neighborhoodName = locationManager.neighborhoodName {
-                        Text("\(Image(systemName: "location.fill")) \(neighborhoodName)")
+                    } else if !locationManager.neighborhoodName.isEmpty {
+                        Text("\(Image(systemName: "location.fill")) \(locationManager.neighborhoodName)")
                     }
                 }
                 .bold()
@@ -93,15 +93,18 @@ struct HomeView: View {
             .onChange(of: metadata?.crimeRecsResponse == nil, { oldValue, newValue in
                 dump(metadata?.crimeRecsResponse)
             })
-            .onChange(of: locationManager.location, { oldValue, newValue in
+            .onChange(of: locationManager.neighborhoodName) { oldValue, newValue in
                 Task {
-                    while(locationManager.neighborhoodName == nil) {
+                    while(locationManager.neighborhoodName.isEmpty) {
                         try await Task.sleep(nanoseconds: 20)
                     }
                     
-                    metadata = LocationMetadata(latitude: newValue!.coordinate.latitude, longitude: newValue!.coordinate.longitude, neighborhood: locationManager.neighborhoodName!)
+                    if let location = locationManager.location {
+                        
+                        metadata = LocationMetadata(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, neighborhood: locationManager.neighborhoodName)
+                    }
                 }
-            })
+            }
             .overlay(alignment: .bottom) {
                 
                 

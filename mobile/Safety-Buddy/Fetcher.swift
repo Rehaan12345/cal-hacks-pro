@@ -30,6 +30,12 @@ class LocationMetadata: ObservableObject {
         setNearbyPoliceStations()
     }
     
+    var adaptedNeighborhood: String {
+        guard neighborhood != "Fashion District" else { return neighborhood }
+        
+        return neighborhood.replacingOccurrences(of: " District", with: "")
+    }
+    
     func setCrimeRecommendations() {
         Task {
             self.crimeRecsResponse = try? await fetchCrimeRecommendations().data.recommendations
@@ -48,7 +54,7 @@ class LocationMetadata: ObservableObject {
         
         // Build JSON body
         let body: [String: Any] = [
-                "neighborhood": neighborhood,
+                "neighborhood": adaptedNeighborhood,
                 "city": city,
                 "state": state,
                 "user_stats": [
