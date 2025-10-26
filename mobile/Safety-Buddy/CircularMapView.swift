@@ -18,7 +18,7 @@ struct CircularMapView: View {
     
     // MARK: - Constants
     private let mapSize: CGFloat = 250
-    private let zoomDistance: CLLocationDistance = 100
+    private let zoomDistance: CLLocationDistance = 300
     private let cameraPitch: CGFloat = 0
     private let recenterDelay: TimeInterval = 2.0
     
