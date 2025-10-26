@@ -19,65 +19,52 @@ struct ProfileView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Spacer()
-                
-                // Processing Photo Indicator
-                if isProcessing {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                            .tint(.primary)
-                        Text("Processing your photo...")
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(.rect(cornerRadius: 20, style: .continuous))
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20, style: .continuous))
-                    .padding(.horizontal, 40)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                
-                // Valuables List
-                if let profile = userProfile, !profile.valuableItems.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Header
-                        HStack {
-                            Text("\(Image(systemName: "sparkles")) Your Valuables")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.secondary)
-                            
-                            Spacer()
-                            
-                            Text("\(profile.valuableItems.count) items")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Processing Photo Indicator
+                    if isProcessing {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .tint(.primary)
+                            Text("Analyzing your photo...")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
                         }
-                        .padding(.bottom, 8)
+                        .padding(20)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(.rect(cornerRadius: 20, style: .continuous))
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20, style: .continuous))
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    
+                    if let profile = userProfile {
+                        // Profile Info Section
+                        if profile.age != nil || profile.gender != nil {
+                            profileInfoSection(profile)
+                        }
                         
-                        // List of valuables
-                        VStack(spacing: 0) {
-                            ForEach(Array(profile.valuableItems.enumerated()), id: \.offset) { index, item in
-                                valuableRow(item)
-                                
-                                if index < profile.valuableItems.count - 1 {
-                                    Divider()
-                                        .padding(.leading, 42)
-                                }
-                            }
+                        // Wealth Indicators Section
+                        if !profile.wealthIndicators.isEmpty {
+                            wealthIndicatorsSection(profile.wealthIndicators)
                         }
+                        
+                        // Valuable Items Section
+                        if !profile.valuableItems.isEmpty {
+                            valuableItemsSection(profile.valuableItems)
+                        }
+                        
+                        // Risk Level Badge
+                        riskLevelBadge(profile.riskLevel)
+                    } else {
+                        // Empty State
+                        emptyStateView()
                     }
-                    .padding(12)
-                    .clipShape(.rect(cornerRadius: 20, style: .continuous))
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20, style: .continuous))
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 40)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    
+                    Spacer(minLength: 40)
                 }
-                
-                Spacer()
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
             }
             .toolbar {
                 NavigationLink(
@@ -87,12 +74,12 @@ struct ProfileView: View {
                     ),
                     isActive: $isCameraButtonPressed
                 ) {
-                    Image(systemName: "camera")
+                    Image(systemName: "camera.fill")
                         .foregroundStyle(.primary)
                         .bold()
                 }
             }
-            .presentationDetents(isCameraButtonPressed ? [.large] : [.fraction(0.5), .fraction(0.7)])
+            .presentationDetents(isCameraButtonPressed ? [.large] : [.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .onAppear {
@@ -112,6 +99,193 @@ struct ProfileView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(profileErrorMessage)
+        }
+    }
+    
+    // MARK: - UI Components
+    
+    private func emptyStateView() -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.crop.circle.badge.camera")
+                .font(.system(size: 60))
+                .foregroundStyle(.secondary)
+            
+            Text("No Profile Yet")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("Take a selfie to analyze your profile and valuable items")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .padding(.vertical, 60)
+    }
+    
+    private func profileInfoSection(_ profile: UserProfile) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Profile Details")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            
+            HStack(spacing: 12) {
+                if let age = profile.age {
+                    infoTile(icon: "calendar", title: "Age", value: age, color: .blue)
+                }
+                
+                if let gender = profile.gender {
+                    infoTile(icon: "person.fill", title: "Gender", value: gender, color: .purple)
+                }
+            }
+        }
+    }
+    
+    private func infoTile(icon: String, title: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundStyle(color)
+                
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Text(value)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func wealthIndicatorsSection(_ indicators: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "sparkles")
+                    .font(.subheadline)
+                    .foregroundStyle(.yellow)
+                
+                Text("Wealth Indicators")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+            }
+            
+            FlowLayout(spacing: 8) {
+                ForEach(indicators, id: \.self) { indicator in
+                    indicatorChip(indicator)
+                }
+            }
+        }
+    }
+    
+    private func indicatorChip(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .clipShape(.rect(cornerRadius: 12, style: .continuous))
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12, style: .continuous))
+    }
+    
+    private func valuableItemsSection(_ items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "shield.checkered")
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+                
+                Text("Your Valuables")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                
+                Spacer()
+                
+                Text("\(items.count)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+            }
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
+                ForEach(items, id: \.self) { item in
+                    valuableTile(item)
+                }
+            }
+        }
+    }
+    
+    private func valuableTile(_ item: String) -> some View {
+        let isAutoDetected = deviceDetection.detectedDevices.contains(item)
+        
+        return VStack(spacing: 10) {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: itemIcon(for: item))
+                    .font(.system(size: 32))
+                    .foregroundStyle(.blue)
+                    .frame(maxWidth: .infinity)
+                
+                if isAutoDetected {
+                    Text("✨")
+                        .font(.caption2)
+                }
+            }
+            
+            Text(item)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(height: 100)
+        .padding(12)
+        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func riskLevelBadge(_ riskLevel: String) -> some View {
+        let (color, icon) = riskLevelInfo(riskLevel)
+        
+        return HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.subheadline)
+            
+            Text("Risk Level:")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            Text(riskLevel.capitalized)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .clipShape(.rect(cornerRadius: 12, style: .continuous))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12, style: .continuous))
+    }
+    
+    private func riskLevelInfo(_ level: String) -> (Color, String) {
+        switch level.lowercased() {
+        case "low":
+            return (.green, "checkmark.shield.fill")
+        case "high":
+            return (.red, "exclamationmark.shield.fill")
+        default:
+            return (.orange, "shield.fill")
         }
     }
     
@@ -143,32 +317,6 @@ struct ProfileView: View {
         
         profile.save()
         userProfile = profile
-    }
-    
-    // MARK: - Valuable Row
-    private func valuableRow(_ item: String) -> some View {
-        let isAutoDetected = deviceDetection.detectedDevices.contains(item)
-        
-        return HStack(spacing: 10) {
-            Image(systemName: itemIcon(for: item))
-                .foregroundStyle(.blue)
-                .font(.system(size: 20))
-                .frame(width: 32, height: 32)
-            
-            HStack(spacing: 4) {
-                Text(item)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                
-                if isAutoDetected {
-                    Text("✨")
-                        .font(.caption)
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(.vertical, 8)
     }
     
     // MARK: - Helper Methods
@@ -240,6 +388,59 @@ struct ProfileView: View {
                 self.showProfileError = true
                 print("Error analyzing photo: \(error.localizedDescription)")
             }
+        }
+    }
+}
+
+// MARK: - FlowLayout Helper
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = FlowResult(
+            in: proposal.replacingUnspecifiedDimensions().width,
+            subviews: subviews,
+            spacing: spacing
+        )
+        return result.size
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = FlowResult(
+            in: bounds.width,
+            subviews: subviews,
+            spacing: spacing
+        )
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x, y: bounds.minY + result.positions[index].y), proposal: .unspecified)
+        }
+    }
+    
+    struct FlowResult {
+        var size: CGSize = .zero
+        var positions: [CGPoint] = []
+        
+        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
+            var x: CGFloat = 0
+            var y: CGFloat = 0
+            var lineHeight: CGFloat = 0
+            
+            for subview in subviews {
+                let size = subview.sizeThatFits(.unspecified)
+                
+                if x + size.width > maxWidth && x > 0 {
+                    x = 0
+                    y += lineHeight + spacing
+                    lineHeight = 0
+                }
+                
+                positions.append(CGPoint(x: x, y: y))
+                lineHeight = max(lineHeight, size.height)
+                x += size.width + spacing
+            }
+            
+            self.size = CGSize(width: maxWidth, height: y + lineHeight)
         }
     }
 }
