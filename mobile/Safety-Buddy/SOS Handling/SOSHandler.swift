@@ -10,27 +10,47 @@ import UIKit
 
 import AVFoundation
 import MediaPlayer
+import Combine
 
 // Actor to keep audio players alive during playback
 actor AudioPlayerManager {
     static let shared = AudioPlayerManager()
     private var players: [AVAudioPlayer] = []
-
+    private var currentPlayer: AVAudioPlayer?
     
     func addPlayer(_ player: AVAudioPlayer) {
         players.append(player)
+        currentPlayer = player
     }
     
     func removePlayer(_ player: AVAudioPlayer) {
         players.removeAll { $0 === player }
+        if currentPlayer === player {
+            currentPlayer = nil
+        }
+    }
+    
+    func getCurrentPlayer() -> AVAudioPlayer? {
+        return currentPlayer
     }
     
     func clear() {
         players.removeAll()
+        currentPlayer = nil
     }
 }
 
-struct SOSHandler {
+@MainActor
+class SOSHandler: ObservableObject {
+    @Published var isWhistleActive = false
+    @Published var isFlashActive = false
+    @Published var whistleVolume: Float = 1.0
+    @Published var flashBrightness: Float = 1.0
+    
+    private var flashTask: Task<Void, Never>?
+    
+    // Minimum brightness level (torch cannot be set to 0.0)
+    static let minBrightness: Float = 0.05
     func call911() {
         if let url = URL(string: "tel://911") {
             if UIApplication.shared.canOpenURL(url) {
@@ -48,14 +68,86 @@ struct SOSHandler {
     }
     
     func whistle() {
+        isWhistleActive = true
         Task {
             await playWhistleSound()
         }
     }
     
     func flash() {
-        Task {
+        isFlashActive = true
+        flashTask = Task {
             await flashSOSPattern()
+        }
+    }
+    
+    func stopWhistle() {
+        isWhistleActive = false
+        Task {
+            if let player = await AudioPlayerManager.shared.getCurrentPlayer() {
+                player.stop()
+                await AudioPlayerManager.shared.removePlayer(player)
+            }
+            
+            do {
+                let audioSession = AVAudioSession.sharedInstance()
+                try audioSession.setActive(false)
+            } catch {
+                print("Error deactivating audio session: \(error)")
+            }
+        }
+    }
+    
+    func stopFlash() {
+        isFlashActive = false
+        flashTask?.cancel()
+        flashTask = nil
+        
+        Task {
+            guard let device = AVCaptureDevice.default(for: .video),
+                  device.hasTorch else {
+                return
+            }
+            
+            do {
+                try device.lockForConfiguration()
+                device.torchMode = .off
+                device.unlockForConfiguration()
+            } catch {
+                print("Error turning off torch: \(error)")
+            }
+        }
+    }
+    
+    func adjustWhistleVolume(_ newVolume: Float) {
+        whistleVolume = max(0.0, min(1.0, newVolume))
+        Task {
+            if let player = await AudioPlayerManager.shared.getCurrentPlayer() {
+                player.volume = whistleVolume
+            }
+            setSystemVolume(to: whistleVolume)
+        }
+    }
+    
+    func adjustFlashBrightness(_ newBrightness: Float) {
+        // Minimum brightness is 0.05 (5%) to avoid crash - torch level cannot be 0.0
+        flashBrightness = max(0.05, min(1.0, newBrightness))
+        
+        Task {
+            guard let device = AVCaptureDevice.default(for: .video),
+                  device.hasTorch else {
+                return
+            }
+            
+            do {
+                try device.lockForConfiguration()
+                if device.torchMode == .on {
+                    try device.setTorchModeOn(level: flashBrightness)
+                }
+                device.unlockForConfiguration()
+            } catch {
+                print("Error adjusting torch brightness: \(error)")
+            }
         }
     }
     
@@ -63,6 +155,9 @@ struct SOSHandler {
         guard let device = AVCaptureDevice.default(for: .video),
               device.hasTorch else {
             print("Torch not available")
+            await MainActor.run {
+                isFlashActive = false
+            }
             return
         }
         
@@ -77,60 +172,82 @@ struct SOSHandler {
         let letterGap: UInt64 = 600_000_000    // 0.6 seconds
         
         do {
-            // Flash SOS pattern 3 times
-            for _ in 0..<3 {
+            // Flash SOS pattern continuously until stopped
+            while !Task.isCancelled {
                 // S (···)
                 for i in 0..<3 {
-                    try await toggleTorch(device, on: true)
+                    guard !Task.isCancelled else { break }
+                    try await toggleTorch(device, on: true, brightness: await flashBrightness)
                     try await Task.sleep(nanoseconds: dotDuration)
-                    try await toggleTorch(device, on: false)
+                    try await toggleTorch(device, on: false, brightness: 1.0)
                     if i < 2 {
                         try await Task.sleep(nanoseconds: shortGap)
                     }
                 }
                 
+                guard !Task.isCancelled else { break }
                 try await Task.sleep(nanoseconds: letterGap)
                 
                 // O (–––)
                 for i in 0..<3 {
-                    try await toggleTorch(device, on: true)
+                    guard !Task.isCancelled else { break }
+                    try await toggleTorch(device, on: true, brightness: await flashBrightness)
                     try await Task.sleep(nanoseconds: dashDuration)
-                    try await toggleTorch(device, on: false)
+                    try await toggleTorch(device, on: false, brightness: 1.0)
                     if i < 2 {
                         try await Task.sleep(nanoseconds: shortGap)
                     }
                 }
                 
+                guard !Task.isCancelled else { break }
                 try await Task.sleep(nanoseconds: letterGap)
                 
                 // S (···)
                 for i in 0..<3 {
-                    try await toggleTorch(device, on: true)
+                    guard !Task.isCancelled else { break }
+                    try await toggleTorch(device, on: true, brightness: await flashBrightness)
                     try await Task.sleep(nanoseconds: dotDuration)
-                    try await toggleTorch(device, on: false)
+                    try await toggleTorch(device, on: false, brightness: 1.0)
                     if i < 2 {
                         try await Task.sleep(nanoseconds: shortGap)
                     }
                 }
                 
+                guard !Task.isCancelled else { break }
                 // Pause between SOS repetitions
                 try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
             }
+            
+            // Ensure torch is off when done
+            try await toggleTorch(device, on: false, brightness: 1.0)
         } catch {
-            print("Error flashing SOS: \(error)")
+            if !Task.isCancelled {
+                print("Error flashing SOS: \(error)")
+            }
+        }
+        
+        await MainActor.run {
+            isFlashActive = false
         }
     }
     
-    private func toggleTorch(_ device: AVCaptureDevice, on: Bool) async throws {
+    private func toggleTorch(_ device: AVCaptureDevice, on: Bool, brightness: Float) async throws {
         try device.lockForConfiguration()
-        device.torchMode = on ? .on : .off
+        if on {
+            // Ensure brightness is at least 0.05 (5%) - torch level cannot be 0.0
+            let safeBrightness = max(0.05, min(1.0, brightness))
+            try device.setTorchModeOn(level: safeBrightness)
+        } else {
+            device.torchMode = .off
+        }
         device.unlockForConfiguration()
     }
     
     private func playWhistleSound() async {
         do {
-            // Set system volume to maximum
-            setSystemVolume(to: 1.0)
+            // Set system volume to current whistle volume
+            let currentVolume = await whistleVolume
+            setSystemVolume(to: currentVolume)
             
             // Configure audio session for maximum volume output
             let audioSession = AVAudioSession.sharedInstance()
@@ -140,12 +257,15 @@ struct SOSHandler {
             // Load siren-ultra.mp3 from bundle
             guard let sirenURL = Bundle.main.url(forResource: "siren-ultra", withExtension: "mp3") else {
                 print("Could not find siren-ultra.mp3")
+                await MainActor.run {
+                    isWhistleActive = false
+                }
                 return
             }
             
-            // Create audio player with maximum settings
+            // Create audio player with settings
             let player = try AVAudioPlayer(contentsOf: sirenURL)
-            player.volume = 1.0 // Max player volume
+            player.volume = currentVolume
             player.numberOfLoops = -1 // Loop indefinitely
             player.enableRate = true
             player.rate = 1.0 // Normal playback speed
@@ -156,8 +276,10 @@ struct SOSHandler {
             
             player.play()
             
-            // Play for 10 seconds
-            try await Task.sleep(nanoseconds: 10_000_000_000)
+            // Keep playing until stopped manually
+            while await isWhistleActive {
+                try await Task.sleep(nanoseconds: 100_000_000) // Check every 0.1 seconds
+            }
             
             // Stop and cleanup
             player.stop()
@@ -166,6 +288,9 @@ struct SOSHandler {
             try audioSession.setActive(false)
         } catch {
             print("Error playing siren: \(error)")
+            await MainActor.run {
+                isWhistleActive = false
+            }
         }
     }
     
