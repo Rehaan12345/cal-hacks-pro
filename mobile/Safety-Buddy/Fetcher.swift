@@ -38,11 +38,11 @@ class LocationMetadata: ObservableObject {
     
     func setCrimeRecommendations() {
         Task {
-            self.crimeRecsResponse = try? await fetchCrimeRecommendations().data.recommendations
+            self.crimeRecsResponse = try? await fetchCrimeRecommendations().recommendations
         }
     }
     
-    func fetchCrimeRecommendations() async throws -> CrimeRecsResponse {
+    func fetchCrimeRecommendations() async throws -> CrimeData {
         guard let url = URL(string: "https://cal-hacks-pro-backend.vercel.app/scraper/crime-recs/") else {
             throw URLError(.badURL)
         }
@@ -79,7 +79,7 @@ class LocationMetadata: ObservableObject {
         }
         
         do {
-            let decodedResponse = try JSONDecoder().decode(CrimeRecsResponse.self, from: data)
+            let decodedResponse = try JSONDecoder().decode(CrimeData.self, from: data)
             
             return decodedResponse
         } catch {
