@@ -78,7 +78,9 @@ struct HomeView: View {
                 Spacer()
                 
                 // Safety Tips Feed
-                SafetyTipsFeed(isExpanded: $safetyTipsAreExpanded)
+                if let metadata {
+                    SafetyTipsFeed(metadata: metadata, isExpanded: $safetyTipsAreExpanded)
+                }
                 
                 
                 Spacer()

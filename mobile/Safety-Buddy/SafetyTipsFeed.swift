@@ -18,16 +18,13 @@ struct SafetyTip: Identifiable {
 // MARK: - Safety Tips Feed
 struct SafetyTipsFeed: View {
     // MARK: - Data
-    private let tips = [
-        SafetyTip(icon: "eye.fill", tip: "Stay aware of your surroundings", category: "Awareness"),
-        SafetyTip(icon: "moon.stars.fill", tip: "Avoid walking alone after dark", category: "Night Safety"),
-        SafetyTip(icon: "figure.walk", tip: "Stick to well-lit, populated areas", category: "Navigation"),
-        SafetyTip(icon: "lock.fill", tip: "Keep your car doors locked", category: "Vehicle"),
-        SafetyTip(icon: "person.2.fill", tip: "Travel in groups when possible", category: "Social"),
-        SafetyTip(icon: "bell.fill", tip: "Trust your instincts", category: "Awareness"),
-    ]
+    @ObservedObject var metadata: LocationMetadata
     
     @Binding var isExpanded: Bool
+    
+    var recommendationsHaveLoaded: Bool {
+        metadata.crimeRecsResponse != nil
+    }
     
     // MARK: - Body
     var body: some View {
@@ -35,7 +32,9 @@ struct SafetyTipsFeed: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             Button {
-                isExpanded.toggle()
+                if recommendationsHaveLoaded {
+                    isExpanded.toggle()
+                }
             } label: {
                 HStack {
                     if isExpanded {
@@ -52,9 +51,13 @@ struct SafetyTipsFeed: View {
                         Spacer()
                     }
                     
+                    if recommendationsHaveLoaded {
                         Image(systemName: "chevron.right")
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
                             .bold()
+                    } else {
+                        ProgressView()
+                    }
                     
                 }
             }
@@ -64,12 +67,14 @@ struct SafetyTipsFeed: View {
                 // Scrollable tips list
                 ScrollView {
                     VStack(spacing: 0) {
-                        ForEach(Array(tips.enumerated()), id: \.element.id) { index, tip in
-                            tipRow(tip)
-                            
-                            if index < tips.count - 1 {
-                                Divider()
-                                    .padding(.leading, 42)
+                        if let tips = metadata.crimeRecsResponse {
+                            ForEach(Array(tips.enumerated()), id: \.offset) { index, tip in
+                                tipRow(tip)
+                                
+                                if index < tips.count - 1 {
+                                    Divider()
+                                        .padding(.leading, 42)
+                                }
                             }
                         }
                     }
@@ -85,22 +90,25 @@ struct SafetyTipsFeed: View {
         .animation(.spring, value: isExpanded)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 40)
+        .onChange(of: recommendationsHaveLoaded) {
+            isExpanded = recommendationsHaveLoaded
+        }
     }
     
     // MARK: - Tip Row
-    private func tipRow(_ tip: SafetyTip) -> some View {
+    private func tipRow(_ tip: String) -> some View {
         HStack(spacing: 10) {
 //            Circle()
 //                .fill(Color.blue.opacity(0.15))
 //                .frame(width: 32, height: 32)
 //                .overlay(
-                    Image(systemName: tip.icon)
+                    Image(systemName: "star.fill")
                         .foregroundStyle(.blue)
                         .font(.system(size: 20))
                         .frame(width: 32, height: 32)
 //                )
             
-            Text(tip.tip)
+            Text(tip)
                 .font(.body)
                 .foregroundStyle(.primary)
             

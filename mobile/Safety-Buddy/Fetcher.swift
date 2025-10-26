@@ -16,7 +16,7 @@ class LocationMetadata: ObservableObject {
     let city: String
     let state: String
     
-    @Published var crimeRecsResponse: CrimeRecsResponse?
+    @Published var crimeRecsResponse: [String]?
     @Published var policeStations: [PoliceStation]?
     
     init(latitude: Double, longitude: Double, neighborhood: String, city: String = "San Francisco", state: String = "California") {
@@ -26,13 +26,13 @@ class LocationMetadata: ObservableObject {
         self.city = city
         self.state = state
         
-//        setCrimeRecommendations()
+        setCrimeRecommendations()
         setNearbyPoliceStations()
     }
     
     func setCrimeRecommendations() {
         Task {
-            self.crimeRecsResponse = try? await fetchCrimeRecommendations()
+            self.crimeRecsResponse = try? await fetchCrimeRecommendations().data.recommendations
         }
     }
     
@@ -41,18 +41,23 @@ class LocationMetadata: ObservableObject {
             throw URLError(.badURL)
         }
         
+        let date = Date()
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let isoString = formatter.string(from: date)
+        
         // Build JSON body
         let body: [String: Any] = [
-            "coords": ["\(latitude)", "\(longitude)"],
-            "neighborhood": neighborhood,
-            "city": city,
-            "state": state,
-            "user_stats": [
-                "additionalProp1": "",
-                "additionalProp2": "",
-                "additionalProp3": ""
+                "neighborhood": neighborhood,
+                "city": city,
+                "state": state,
+                "user_stats": [
+                    "additionalProp1": "",
+                    "additionalProp2": ""
+                ],
+                "transport": "walk",
+                "time": isoString
             ]
-        ]
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
