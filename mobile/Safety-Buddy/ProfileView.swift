@@ -16,12 +16,13 @@ struct ProfileView: View {
     @State private var profileErrorMessage = ""
     @State private var isCameraButtonPressed = false
     @State private var isEditMode = false
+    @State private var showAddItemSheet = false
+    @State private var newItemName = ""
     @StateObject private var deviceDetection = DeviceDetectionService.shared
     
     // Edit state
     @State private var editAge: String = ""
     @State private var editGender: String = ""
-    @State private var editRiskLevel: String = "medium"
     
     var body: some View {
         NavigationStack {
@@ -125,9 +126,69 @@ struct ProfileView: View {
         } message: {
             Text(profileErrorMessage)
         }
+        .sheet(isPresented: $showAddItemSheet) {
+            addItemSheet()
+        }
     }
     
     // MARK: - UI Components
+    
+    private func addItemSheet() -> some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                VStack(spacing: 12) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 60))
+                        .foregroundStyle(.blue)
+                    
+                    Text("Add Valuable Item")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("Enter the name of the item you want to track")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 40)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Item Name")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                    
+                    TextField("e.g., Laptop, Wallet, Keys", text: $newItemName)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .padding(16)
+                        .clipShape(.rect(cornerRadius: 12, style: .continuous))
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12, style: .continuous))
+                }
+                .padding(.horizontal, 20)
+                
+                Spacer()
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        newItemName = ""
+                        showAddItemSheet = false
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        addValuableItem()
+                    }
+                    .disabled(newItemName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .fontWeight(.semibold)
+                }
+            }
+            .presentationDetents([.height(350)])
+            .presentationDragIndicator(.visible)
+        }
+    }
     
     private func emptyStateView() -> some View {
         VStack(spacing: 16) {
@@ -267,6 +328,14 @@ struct ProfileView: View {
                 
                 Spacer()
                 
+                Button {
+                    showAddItemSheet = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.blue)
+                }
+                
                 Text("\(items.count)")
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -330,11 +399,7 @@ struct ProfileView: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
             
-            if isEditMode {
-                editableRiskLevelBadge()
-            } else {
-                riskLevelBadge(riskLevel)
-            }
+            riskLevelBadge(riskLevel)
         }
     }
     
@@ -363,46 +428,6 @@ struct ProfileView: View {
         .padding(16)
         .clipShape(.rect(cornerRadius: 16, style: .continuous))
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16, style: .continuous))
-    }
-    
-    private func editableRiskLevelBadge() -> some View {
-        let levels: [String] = ["low", "medium", "high"]
-        
-        return VStack(spacing: 12) {
-            ForEach(levels, id: \.self) { level in
-                let (color, icon) = riskLevelInfo(level)
-                let isSelected = editRiskLevel == level
-                
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        editRiskLevel = level
-                    }
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: icon)
-                            .font(.title3)
-                            .foregroundStyle(isSelected ? color : .secondary)
-                        
-                        Text(level.capitalized)
-                            .font(.body)
-                            .fontWeight(isSelected ? .semibold : .regular)
-                            .foregroundStyle(isSelected ? color : .primary)
-                        
-                        Spacer()
-                        
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(color)
-                        }
-                    }
-                    .padding(14)
-                    .clipShape(.rect(cornerRadius: 12, style: .continuous))
-                    .glassEffect(.regular, in: .rect(cornerRadius: 12, style: .continuous))
-                    .opacity(isSelected ? 1.0 : 0.7)
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
     
     private func riskLevelInfo(_ level: String) -> (Color, String) {
@@ -438,7 +463,6 @@ struct ProfileView: View {
     private func loadEditState(from profile: UserProfile) {
         editAge = profile.age ?? ""
         editGender = profile.gender ?? ""
-        editRiskLevel = profile.riskLevel
     }
     
     private func saveEdits() {
@@ -446,10 +470,32 @@ struct ProfileView: View {
         
         profile.age = editAge.isEmpty ? nil : editAge
         profile.gender = editGender.isEmpty ? nil : editGender
-        profile.riskLevel = editRiskLevel
         
         profile.save()
         userProfile = profile
+    }
+    
+    private func addValuableItem() {
+        guard var profile = userProfile else { return }
+        let trimmedName = newItemName.trimmingCharacters(in: .whitespaces)
+        
+        guard !trimmedName.isEmpty else { return }
+        
+        // Check if item already exists
+        guard !profile.valuableItems.contains(where: { $0.lowercased() == trimmedName.lowercased() }) else {
+            newItemName = ""
+            showAddItemSheet = false
+            return
+        }
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            profile.valuableItems.append(trimmedName)
+            profile.save()
+            userProfile = profile
+        }
+        
+        newItemName = ""
+        showAddItemSheet = false
     }
     
     private func removeValuableItem(_ item: String) {
